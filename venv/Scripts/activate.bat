@@ -1,5 +1,5 @@
 @echo off
-set "VIRTUAL_ENV=D:\Dev\htdocs\knn-rec\venv"
+set "VIRTUAL_ENV=E:\Xampp\htdocs\movie-rec\venv"
 
 if not defined PROMPT (
     set "PROMPT=$P$G"
