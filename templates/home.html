@@ -26,12 +26,12 @@
   <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/icon.css') }}">
   <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/sidebar.css') }}">
   <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/transition.css') }}">
-   
+
   <script src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js') }}"></script>
   <script src="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/visibility.js') }}"></script>
   <script src="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/sidebar.js') }}"></script>
   <script src="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/transition.js') }}"></script>
-  
+
   <style type="text/css">
 
     .hidden.menu {
@@ -122,7 +122,7 @@
 
   </style>
 
-  
+
   <script>
   $(document)
     .ready(function() {
@@ -155,7 +155,7 @@
 <div class="ui large top fixed hidden menu">
   <div class="ui container">
     <a class="active item">Home</a>
-    <a class="item">Work</a>
+    <a class="item">Movie List</a>
     <a class="item">Company</a>
     <a class="item">Careers</a>
     <div class="right menu">
@@ -172,7 +172,7 @@
 <!-- Sidebar Menu -->
 <div class="ui vertical inverted sidebar menu">
   <a class="active item">Home</a>
-  <a class="item">Work</a>
+  <a class="item">Movie List</a>
   <a class="item">Company</a>
   <a class="item">Careers</a>
   <a class="item">Login</a>
@@ -190,7 +190,7 @@
           <i class="sidebar icon"></i>
         </a>
         <a class="active item">Home</a>
-        <a class="item">Work</a>
+        <a href="#" class="item">Movie List</a>
         <a class="item">Company</a>
         <a class="item">Careers</a>
         <div class="right item">
@@ -217,7 +217,13 @@
           <h3 class="ui header">Top Popular Movies</h3>
           <p>We can give your company superpowers to do things that they never thought possible. Let us delight your customers and empower your needs...through pure data analytics.</p>
           <h3 class="ui header">Top Rated Movies</h3>
-          <p>Yes that's right, you thought it was the stuff of dreams, but even bananas can be bioengineered.</p>
+          <div class=page>
+            <h1>Movies</h1>
+            {% for table in top_movie_tables %}
+              <h2>{{titles[loop.index]}}</h2>
+              {{ table|safe }}
+            {% endfor %}
+          </div>
         </div>
       </div>
       <div class="row">
