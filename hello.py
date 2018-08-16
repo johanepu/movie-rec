@@ -1,4 +1,4 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request, g
 import MySQLdb as db
 import csv
 import numpy as np
@@ -11,8 +11,16 @@ import os
 import nltk
 from nltk.corpus import wordnet as wn
 from scipy.spatial.distance import euclidean
+import time
 
 app = Flask(__name__)
+app.config['DEBUG'] = True
+
+#checkpoint timer
+@app.before_request
+def before_request():
+    g.request_start_time = time.time()
+    g.request_time = lambda: "%.5fs" % (time.time() - g.request_start_time)
 
 #pake SQL
 @app.route('/')
@@ -38,11 +46,15 @@ def coba():
 #pake Panda dataframe
 @app.route('/movie-dataframe')
 def panda():
+    t = request.values.get('t', 0)
     data_movies = pd.read_csv('dataset/movies.csv')
     data_movies.set_index(['movieId'], inplace=True)
     data_movies.index.name=None
-    return render_template('dataframe.html',tables=[data_movies.to_html(classes='movies')],
+
+
+    return render_template('dataframe.html',tables=[data_movies.to_html(classes='ui definition table', table_id='movie_list')],
     titles = ['na', 'Movie List'])
+    time.sleep(float(t)) #just to show it works...
 
 #pake Panda dataframe
 @app.route('/rating-dataframe')
@@ -241,6 +253,9 @@ def get_recommendation():
 
 @app.route('/get_recommendation2')
 def get_recommendation2():
+    t = request.values.get('t', 0)
+    # if request.method == 'POST':
+    #     current_user = request.form['userId']
 
     #preprocess
     movie_data = pd.read_csv('dataset/movies.csv')
@@ -335,11 +350,13 @@ def get_recommendation2():
 
         return top_n_recommendation_titles
 
-    current_user = 140
+    current_user = 1
     fav_movies = fav_movies(current_user, 5)
     recommendations = top_n_recommendations(current_user, 5)
 
-    return render_template('dataframe.html', fav_movies=[fav_movies.to_html(classes='movies')],
+    time.sleep(float(t)) #just to show it works...
+
+    return render_template('result.html', fav_movies=[fav_movies.to_html(classes='movies')],
     recommendations=[recommendations.to_html(classes='movies')],
     titles = ['na', 'Movie List'])
 

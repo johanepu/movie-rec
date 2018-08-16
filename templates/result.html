@@ -1,9 +1,17 @@
-<table border="1" cellpadding="5" cellspacing="5">
-{% for row in data %}
-    <tr>
-    {% for d in row %}
-        <td>{{ d }}</td>
-    {% endfor %}
-    </tr>
-{% endfor %}
-</table>
+<!doctype html>
+<title>Simple tables</title>
+<div class=page>
+  <h1> Fav Movies</h1>
+  {% for table in fav_movies %}
+    {{ table|safe }}
+  {% endfor %}
+</div>
+
+<div class=page>
+  <h1>Recommendations</h1>
+  {% for table in recommendations %}
+    {{ table|safe }}
+  {% endfor %}
+</div>
+
+Rendered in {{ g.request_time() }}
