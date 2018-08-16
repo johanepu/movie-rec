@@ -190,7 +190,7 @@
           <i class="sidebar icon"></i>
         </a>
         <a class="active item">Home</a>
-        <a href="#" class="item">Movie List</a>
+        <a href="{{ url_for('panda') }}" class="item">Movie List</a>
         <a class="item">Company</a>
         <a class="item">Careers</a>
         <div class="right item">
@@ -205,7 +205,7 @@
         Home | {{ name }}
       </h1>
       <h2>Do whatever you want when you want to.</h2>
-      <div class="ui huge primary button">Get Recommendations <i class="right arrow icon"></i></div>
+      <a href="{{ url_for('get_recommendation') }}" class="ui huge primary button">Get Recommendations <i class="right arrow icon"></i></a>
     </div>
 
   </div>
@@ -218,7 +218,7 @@
           <div class=page>
             <h1>Movies</h1>
             {% for table in pop_movie_tables %}
-              <h2>{{titles[loop.index]}}</h2>
+
               {{ table|safe }}
             {% endfor %}
           </div>
@@ -226,7 +226,7 @@
           <div class=page>
             <h1>Movies</h1>
             {% for table in top_movie_tables %}
-              <h2>{{titles[loop.index]}}</h2>
+
               {{ table|safe }}
             {% endfor %}
           </div>
