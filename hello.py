@@ -51,13 +51,21 @@ def home(name):
     data_ratings = pd.read_csv('dataset/ratings.csv')
     movieLens = pd.merge(data_ratings, data_movies, left_on = 'movieId', right_on = 'movieId')
     data_merged = movieLens[['userId', 'movieId', 'title', 'rating']]
+
     movie_list = (((data_merged.sort_values(by = 'movieId')).groupby('title')))['movieId', 'title', 'rating']
     movie_list = movie_list.mean()
     movie_list['title'] = movie_list.index
     movie_list = movie_list.as_matrix()
     movie_list = pd.DataFrame(movie_list, columns = ['movieId', 'avgRating', 'title']).sort_values('movieId').reset_index(drop = True)
+
+    # vector_sizes = data_merged.groupby('movieId')['userId'].nunique().sort_values(ascending=False)
+    vector_sizes = data_merged.groupby('title')['title', 'userId'].nunique().sort_values(by = 'title', ascending=False)
+    vector_sizes['title'] = vector_sizes.index
+    vector_sizes = vector_sizes.as_matrix()
+    vector_sizes = pd.DataFrame(vector_sizes, columns = ['title' , 'ratingCount']).sort_values('ratingCount').reset_index(drop = True)
+
     top_rating = movie_list.sort_values(['avgRating'],ascending=False).head(10)
-    top_popular = movie_list.sort_values(['avgRating'],ascending=False).head(10)
+    top_popular = vector_sizes.sort_values(['ratingCount'],ascending=False).head(10)
     return render_template("home.html", name=name, top_movie_tables=[top_rating.to_html(classes='top_rating')],
     pop_movie_tables=[top_popular.to_html(classes='top_popular')], titles = ['na', 'Top Rated'])
     # top_popular = movieLens.title.value_counts().head(10)
