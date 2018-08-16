@@ -215,7 +215,13 @@
       <div class="row">
         <div class="eight wide column">
           <h3 class="ui header">Top Popular Movies</h3>
-          <p>We can give your company superpowers to do things that they never thought possible. Let us delight your customers and empower your needs...through pure data analytics.</p>
+          <div class=page>
+            <h1>Movies</h1>
+            {% for table in pop_movie_tables %}
+              <h2>{{titles[loop.index]}}</h2>
+              {{ table|safe }}
+            {% endfor %}
+          </div>
           <h3 class="ui header">Top Rated Movies</h3>
           <div class=page>
             <h1>Movies</h1>

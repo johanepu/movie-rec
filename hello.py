@@ -49,7 +49,7 @@ def panda_rating():
 def home(name):
     data_movies = pd.read_csv('dataset/movies.csv')
     data_ratings = pd.read_csv('dataset/ratings.csv')
-    movieLens = pd.merge(data_ratings, data_movies, on = 'movieId')
+    movieLens = pd.merge(data_ratings, data_movies, left_on = 'movieId', right_on = 'movieId')
     data_merged = movieLens[['userId', 'movieId', 'title', 'rating']]
     movie_list = (((data_merged.sort_values(by = 'movieId')).groupby('title')))['movieId', 'title', 'rating']
     movie_list = movie_list.mean()
@@ -57,9 +57,10 @@ def home(name):
     movie_list = movie_list.as_matrix()
     movie_list = pd.DataFrame(movie_list, columns = ['movieId', 'avgRating', 'title']).sort_values('movieId').reset_index(drop = True)
     top_rating = movie_list.sort_values(['avgRating'],ascending=False).head(10)
+    top_popular = movie_list.sort_values(['avgRating'],ascending=False).head(10)
     return render_template("home.html", name=name, top_movie_tables=[top_rating.to_html(classes='top_rating')],
-    titles = ['na', 'Top Rated'])
-
+    pop_movie_tables=[top_popular.to_html(classes='top_popular')], titles = ['na', 'Top Rated'])
+    # top_popular = movieLens.title.value_counts().head(10)
 @app.route('/signin', methods=['GET', 'POST'])
 def signin():
 	# if request.method == 'POST':
