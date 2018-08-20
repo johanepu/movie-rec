@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, g
+from flask import Flask, flash, abort, render_template, request, g, session, redirect, url_for
 import MySQLdb as db
 import csv
 import numpy as np
@@ -12,9 +12,13 @@ import nltk
 from nltk.corpus import wordnet as wn
 from scipy.spatial.distance import euclidean
 import time
+from hashlib import md5
 
 app = Flask(__name__)
+app.secret_key = 'bismillah'
 app.config['DEBUG'] = True
+
+class ServerError(Exception):pass
 
 #checkpoint timer
 @app.before_request
@@ -32,6 +36,52 @@ def index():
     cursor.execute(query)
     result = cursor.fetchall()
     return render_template('db.html', data = result)
+
+@app.route('/login', methods=['GET','POST'])
+def do_admin_login():
+    # if request.form['password'] == 'password' and request.form['email'] == 'admin@gmail.com':
+    #     session['logged_in'] = True
+    #     session['name'] = request.form['email']
+    # else:
+    #     flash('wrong password!')
+    # return home()
+    connection = db.connect('localhost', 'root', '', 'movie_rec')
+    cur = connection.cursor()
+    if 'email' in session:
+        return redirect(url_for('home'))
+
+    error = None
+    try:
+        if request.method == 'POST':
+            email_form  = request.form['email']
+            cur.execute("SELECT COUNT(1) FROM users_detail WHERE email = %s;", [email_form]
+                        )
+
+            if not cur.fetchone()[0]:
+                raise ServerError('Invalid email')
+
+            password_form  = request.form['password']
+            cur.execute("SELECT password FROM users_detail WHERE email = %s;", [email_form]
+                        )
+
+            for row in cur.fetchall():
+                if password_form == row[0]:
+                    session['name'] = request.form['email']
+                    session['logged_in'] = True
+                    return redirect(url_for('home'))
+
+            raise ServerError('Invalid password')
+    except ServerError as e:
+        error = str(e)
+
+    return render_template('signin.html', error=error)
+
+@app.route("/logout")
+def logout():
+    session['logged_in'] = False
+
+    session.clear()
+    return home()
 
 #pake CSV reader
 @app.route('/movie-csv')
@@ -66,45 +116,67 @@ def panda_rating():
     return render_template('dataframe.html',tables=[sorted_ratings.to_html(classes='ratings')],
     titles = ['na', 'Rating List'])
 
-@app.route('/home/<name>')
-def home(name):
-    data_movies = pd.read_csv('dataset/movies.csv')
-    data_ratings = pd.read_csv('dataset/ratings.csv')
-    movieLens = pd.merge(data_ratings, data_movies, left_on = 'movieId', right_on = 'movieId')
-    data_merged = movieLens[['userId', 'movieId', 'title', 'rating']]
+@app.route('/home/')
+def home():
+    if not session.get('logged_in'):
+        return render_template('signin.html')
+    else:
+        name = session.get('name')
+        data_movies = pd.read_csv('dataset/movies.csv')
+        data_ratings = pd.read_csv('dataset/ratings.csv')
+        movieLens = pd.merge(data_ratings, data_movies, left_on = 'movieId', right_on = 'movieId')
+        data_merged = movieLens[['userId', 'movieId', 'title', 'rating']]
 
-    movie_list = (((data_merged.sort_values(by = 'movieId')).groupby('title')))['movieId', 'title', 'rating']
-    movie_list = movie_list.mean()
-    movie_list['title'] = movie_list.index
-    movie_list = movie_list.as_matrix()
-    movie_list = pd.DataFrame(movie_list, columns = ['movieId', 'avgRating', 'title']).sort_values('movieId').reset_index(drop = True)
+        movie_list = (((data_merged.sort_values(by = 'movieId')).groupby('title')))['movieId', 'title', 'rating']
+        movie_list = movie_list.mean()
+        movie_list['title'] = movie_list.index
+        movie_list = movie_list.as_matrix()
+        movie_list = pd.DataFrame(movie_list, columns = ['movieId', 'avgRating', 'title']).sort_values('movieId').reset_index(drop = True)
 
-    # vector_sizes = data_merged.groupby('movieId')['userId'].nunique().sort_values(ascending=False)
-    vector_sizes = data_merged.groupby('title')['title', 'userId'].nunique().sort_values(by = 'title', ascending=False)
-    vector_sizes['title'] = vector_sizes.index
-    vector_sizes = vector_sizes.as_matrix()
-    vector_sizes = pd.DataFrame(vector_sizes, columns = ['title' , 'ratingCount']).sort_values('ratingCount').reset_index(drop = True)
+        # vector_sizes = data_merged.groupby('movieId')['userId'].nunique().sort_values(ascending=False)
+        vector_sizes = data_merged.groupby('title')['title', 'userId'].nunique().sort_values(by = 'title', ascending=False)
+        vector_sizes['title'] = vector_sizes.index
+        vector_sizes = vector_sizes.as_matrix()
+        vector_sizes = pd.DataFrame(vector_sizes, columns = ['title' , 'ratingCount']).sort_values('ratingCount').reset_index(drop = True)
 
-    top_rating = movie_list.sort_values(['avgRating'],ascending=False).head(10)
-    top_popular = vector_sizes.sort_values(['ratingCount'],ascending=False).head(10)
-    return render_template("home.html", name=name, top_movie_tables=[top_rating.to_html(classes='top_rating')],
-    pop_movie_tables=[top_popular.to_html(classes='top_popular')])
-    # top_popular = movieLens.title.value_counts().head(10)
+        top_rating = movie_list.sort_values(['avgRating'],ascending=False).head(10)
+        top_popular = vector_sizes.sort_values(['ratingCount'],ascending=False).head(10)
+        return render_template("home.html", name=name, top_movie_tables=[top_rating.to_html(classes='top_rating')],
+        pop_movie_tables=[top_popular.to_html(classes='top_popular')])
+        # top_popular = movieLens.title.value_counts().head(10)
 
 @app.route('/signin', methods=['GET', 'POST'])
 def signin():
-	# if request.method == 'POST':
-	# 	#fetch data
-	# 	userDetails  = request.form
-	# 	name = userDetails['name_reg']
-	# 	email = userDetails['email_reg']
-	# 	password = userDetails['password_reg']
-	# 	cur = mysql.connection.cursor()
-	# 	cur.execute("INSERT INTO users_detail(name, email, password) VALUES(%s, %s, %s)", (name, email, password))
-	# 	mysql.connection.commit()
-	# 	cur.close()
-	# 	return 'success'
+
     return render_template("signin.html")
+    # if request.method == 'POST':
+    # 	userDetails = request.form
+    #     name = userDetails['name_reg']
+    #     email = userDetails['email_reg'] password = userDetails['password_reg']
+    # # 	cur = mysql.connection.cursor()
+	# # 	cur.execute("INSERT INTO users_detail(name, email, password) VALUES(%s, %s, %s)", (name, email, password))
+	# # 	mysql.connection.commit()
+	# # 	cur.close()
+	# # 	return 'success'
+
+@app.route('/register', methods=['POST'])
+def register():
+    # user_rating = pd.read_csv('dataset/ratings.csv')
+    # id = max(user_rating.userId)
+    connection = db.connect('localhost', 'root', '', 'movie_rec')
+    cur = connection.cursor()
+    cur.execute("SELECT MAX(id) FROM users_detail")
+    max_id = cur.fetchone()
+    max_id = max_id[0]
+    # max_id = cur.execute("SELECT id FROM users order by id desc limit 1")
+    userDetails = request.form
+    name = userDetails['name_reg']
+    email = userDetails['email_reg']
+    password = userDetails['password_reg']
+    cur.execute("INSERT INTO users_detail(id, name, email, password) VALUES(%s, %s, %s, %s)", (max_id+1, name, email, password))
+    connection.commit()
+    cur.close()
+    return render_template('signin.html')
 
 @app.route('/get_recommendation')
 def get_recommendation():
@@ -350,15 +422,17 @@ def get_recommendation2():
 
         return top_n_recommendation_titles
 
-    current_user = 1
+    current_user = 650
     fav_movies = fav_movies(current_user, 5)
     recommendations = top_n_recommendations(current_user, 5)
 
     time.sleep(float(t)) #just to show it works...
 
-    return render_template('result.html', fav_movies=[fav_movies.to_html(classes='movies')],
-    recommendations=[recommendations.to_html(classes='movies')],
+    return render_template('result.html', fav_movies=[fav_movies.to_html(classes='ui definition table')],
+    recommendations=[recommendations.to_html(classes='ui definition table')],
     titles = ['na', 'Movie List'])
 
 if __name__ == "__main__":
-	app.run(debug=True)
+    app.secret_key = 'bismillah'
+    sess.init_app(app)
+    app.run(debug=True)

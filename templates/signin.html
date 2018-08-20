@@ -141,6 +141,9 @@
   <div class="column">
     <h2 class="ui teal image header">
       <img src="{{ url_for('static', filename='assets/images/logo.png') }}" class="image">
+  {% if session['logged_in'] %}
+    <p>You're logged in already!</p>
+  {% else %}
       <div class="content">
         Log-in to your account
       </div>
@@ -154,7 +157,7 @@
 	  </a>
 	</div>
 	<div class="ui tab segment active" data-tab="tab-name">
-	  <form class="ui large form">
+	  <form action="/login" method="POST" class="ui large form" id="login" name="login">
 		  <div class="ui stacked segment">
 			<div class="field">
 			  <div class="ui left icon input">
@@ -168,14 +171,15 @@
 				<input type="password" name="password" placeholder="Password">
 			  </div>
 			</div>
-			<div class="ui fluid large teal submit button">Login</div>
+      <input type="submit" value="Login" class="ui fluid large teal submit button"></input>
 		  </div>
 		  <div class="ui error message"></div>
 	  </form>
 	</div>
 
+
 	<div class="ui tab segment" data-tab="tab-name2">
-	  <form class="ui large form">
+	  <form class="ui large form" action="/register" method="POST" id="register" name="register">
 		  <div class="ui stacked segment">
 			<div class="field">
 			  <div class="ui left icon input">
@@ -195,15 +199,21 @@
 				<input type="password" name="password_reg" placeholder="Password">
 			  </div>
 			</div>
-			<div class="ui fluid large teal submit button">Register</div>
+			<input type="submit" value="Register" class="ui fluid large teal submit button"></input>
 		  </div>
 		  <div class="ui error message"></div>
 	  </form>
 	</div>
 
-    <div class="ui message">
+  {% endif %}
+
+  {{ name }}
+  {{ email }}
+  {{ password }}
+
+    <!-- <div class="ui message">
       New to us? <a href="#">Sign Up</a>
-    </div>
+    </div> -->
   </div>
 </div>
 
