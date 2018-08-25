@@ -159,9 +159,15 @@
     <a class="item">Company</a>
     <a class="item">Careers</a>
     <div class="right menu">
+    {% if session['logged_in'] %}
       <div class="item">
-        <a class="ui button">Log in</a>
+        <a href="{{ url_for('logout') }}" class="ui button">Logout</a>
       </div>
+    {% else %}
+      <div class="item">
+        <a href="{{ url_for('do_admin_login') }}" class="ui button">Login</a>
+      </div>
+    {% endif %}
       <div class="item">
         <a class="ui primary button">Sign Up</a>
       </div>
@@ -171,12 +177,16 @@
 
 <!-- Sidebar Menu -->
 <div class="ui vertical inverted sidebar menu">
-  <a class="active item">Home</a>
+  <a href="{{ url_for('panda') }}" class="active item">Home</a>
   <a class="item">Movie List</a>
   <a class="item">Company</a>
   <a class="item">Careers</a>
-  <a class="item">Login</a>
-  <a class="item">Signup</a>
+  {% if session['logged_in'] %}
+    <a href="{{ url_for('logout') }}" class="item">Logout</a>
+  {% else %}
+    <a href="{{ url_for('do_admin_login') }}" class="item">Login</a>
+  {% endif %}
+    <a class="item">Signup</a>
 </div>
 
 

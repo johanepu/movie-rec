@@ -78,9 +78,8 @@ def do_admin_login():
 
 @app.route("/logout")
 def logout():
-    session['logged_in'] = False
-
     session.clear()
+    session['logged_in'] = False
     return home()
 
 #pake CSV reader
