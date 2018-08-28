@@ -32,6 +32,7 @@
   <script src="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/sidebar.js') }}"></script>
   <script src="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/transition.js') }}"></script>
 
+
   <style type="text/css">
 
     .hidden.menu {
@@ -154,9 +155,9 @@
 <!-- Following Menu -->
 <div class="ui large top fixed hidden menu">
   <div class="ui container">
-    <a class="active item">Home</a>
-    <a class="item">Movie List</a>
-    <a class="item">Company</a>
+    <a href="{{ url_for('home') }}" class="active item">Home</a>
+    <a href="{{ url_for('panda') }}" class="item">Movie List</a>
+    <a href="{{ url_for('ratings') }}" class="item">Ratings</a>
     <a class="item">Careers</a>
     <div class="right menu">
     {% if session['logged_in'] %}
@@ -177,9 +178,9 @@
 
 <!-- Sidebar Menu -->
 <div class="ui vertical inverted sidebar menu">
-  <a href="{{ url_for('panda') }}" class="active item">Home</a>
-  <a class="item">Movie List</a>
-  <a class="item">Company</a>
+  <a href="{{ url_for('home') }}" class="active item">Home</a>
+  <a href="{{ url_for('panda') }}" class="item">Movie List</a>
+  <a href="{{ url_for('ratings') }}" class="item">Ratings</a>
   <a class="item">Careers</a>
   {% if session['logged_in'] %}
     <a href="{{ url_for('logout') }}" class="item">Logout</a>
@@ -199,9 +200,9 @@
         <a class="toc item">
           <i class="sidebar icon"></i>
         </a>
-        <a class="active item">Home</a>
+        <a href="{{ url_for('home') }}" class="active item">Home</a>
         <a href="{{ url_for('panda') }}" class="item">Movie List</a>
-        <a class="item">Company</a>
+        <a href="{{ url_for('ratings') }}" class="item">Ratings</a>
         <a class="item">Careers</a>
         <div class="right item">
           {% if session['logged_in'] %}
@@ -218,7 +219,7 @@
       <h1 class="ui inverted header">
         Home | {{ name }}
       </h1>
-      <h2>Do whatever you want when you want to.</h2>
+      <h2>Click button to get movie recommendation | userID : {{ userId }}.</h2>
       <a href="{{ url_for('get_recommendation2') }}" class="ui huge primary button">Get Recommendations <i class="right arrow icon"></i></a>
     </div>
 

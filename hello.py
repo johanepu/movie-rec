@@ -13,6 +13,7 @@ from nltk.corpus import wordnet as wn
 from scipy.spatial.distance import euclidean
 import time
 from hashlib import md5
+import json
 
 app = Flask(__name__)
 app.secret_key = 'bismillah'
@@ -47,9 +48,8 @@ def do_admin_login():
     # return home()
     connection = db.connect('localhost', 'root', '', 'movie_rec')
     cur = connection.cursor()
-    if 'email' in session:
+    if 'logged_in' in session:
         return redirect(url_for('home'))
-
     error = None
     try:
         if request.method == 'POST':
@@ -61,12 +61,13 @@ def do_admin_login():
                 raise ServerError('Invalid email')
 
             password_form  = request.form['password']
-            cur.execute("SELECT password FROM users_detail WHERE email = %s;", [email_form]
+            cur.execute("SELECT password,name,id FROM users_detail WHERE email = %s;", [email_form]
                         )
 
             for row in cur.fetchall():
                 if password_form == row[0]:
-                    session['name'] = request.form['email']
+                    session['name'] = row[1]
+                    session['id'] = row[2]
                     session['logged_in'] = True
                     return redirect(url_for('home'))
 
@@ -79,7 +80,6 @@ def do_admin_login():
 @app.route("/logout")
 def logout():
     session.clear()
-    session['logged_in'] = False
     return home()
 
 #pake CSV reader
@@ -121,6 +121,7 @@ def home():
         return render_template('signin.html')
     else:
         name = session.get('name')
+        userId = session.get('id')
         data_movies = pd.read_csv('dataset/movies.csv')
         data_ratings = pd.read_csv('dataset/ratings.csv')
         movieLens = pd.merge(data_ratings, data_movies, left_on = 'movieId', right_on = 'movieId')
@@ -140,7 +141,7 @@ def home():
 
         top_rating = movie_list.sort_values(['avgRating'],ascending=False).head(10)
         top_popular = vector_sizes.sort_values(['ratingCount'],ascending=False).head(10)
-        return render_template("home.html", name=name, top_movie_tables=[top_rating.to_html(classes='top_rating')],
+        return render_template("home.html", name=name, userId=userId, top_movie_tables=[top_rating.to_html(classes='top_rating')],
         pop_movie_tables=[top_popular.to_html(classes='top_popular')])
         # top_popular = movieLens.title.value_counts().head(10)
 
@@ -421,7 +422,7 @@ def get_recommendation2():
 
         return top_n_recommendation_titles
 
-    current_user = 650
+    current_user = session.get('id')
     fav_movies = fav_movies(current_user, 5)
     recommendations = top_n_recommendations(current_user, 5)
 
@@ -430,6 +431,80 @@ def get_recommendation2():
     return render_template('result.html', fav_movies=[fav_movies.to_html(classes='ui definition table')],
     recommendations=[recommendations.to_html(classes='ui definition table')],
     titles = ['na', 'Movie List'])
+
+@app.route('/ratings')
+def ratings():
+    t = request.values.get('t', 0)
+    # if request.method == 'POST':
+    #     current_user = request.form['userId']
+
+    #preprocess
+    movie_data = pd.read_csv('dataset/movies.csv')
+    rating_info = pd.read_csv('dataset/ratings.csv')
+    movie_info = pd.merge(movie_data, rating_info, left_on = 'movieId', right_on = 'movieId')
+
+    def fav_movies(current_user):
+        fav_movies = pd.DataFrame.sort_values(movie_info[movie_info.userId == current_user], ['rating'], ascending = [0])
+        fav_movies = fav_movies[['title','genres','rating']]
+        return fav_movies
+
+    def source():
+        source = pd.DataFrame.sort_values(movie_data, ['movieId'], ascending = [1])
+        source = source[['movieId','title']]
+        return source
+
+    current_user = session.get('id')
+    fav_movies = fav_movies(current_user)
+    if len(fav_movies) == 0:
+        fav_movies=[{}]
+    else:
+        fav_movies = json.loads(fav_movies.to_json(orient='records'))
+    source = source()
+    source = json.loads(source.to_json(orient='records'))
+
+    time.sleep(float(t)) #just to show it works...
+
+    return render_template('ratings.html', fav_movies=fav_movies, userId=current_user, source=source,
+    titles = ['na', 'Movie List'])
+
+@app.route('/insert_rating', methods=['GET','POST'])
+def insert_rating():
+    if request.method == 'POST':
+        userId = session.get('id')
+        id_input  = request.form['idarray[]']
+        rating_input  = request.form['ratingarray[]']
+
+        ratingarray = rating_input.split(",")
+        idarray = id_input.split(",")
+
+        # import csv
+        # fields=['first','second','third']
+        # with open(r'name', 'a') as f:
+        #     writer = csv.writer(f)
+        #     writer.writerow(fields)
+        # with open('dataset/ratings.csv', 'a') as csvfile:
+            # fieldnames = ['userId', 'movieId', 'rating', 'timestamp']
+            # writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            #
+            # writer.writeheader()
+            # i = 0
+            # while i < len(idarray):
+            #     writer.writerow({'userId': userId, 'movieId': idarray[i], 'rating': ratingarray[i], 'timestamp': '123445667'})
+            #     i+1
+
+        row = [userId, idarray[0], ratingarray[0], '12345567']
+
+        with open('dataset/ratings.csv', 'a', newline='') as csvFile:
+            writer = csv.writer(csvFile)
+            i=0
+            while i < len(idarray):
+                writer.writerow([userId, idarray[i], ratingarray[i], '12345567'])
+                i += 1
+        csvFile.close()
+
+    # return render_template('test.html',rating=ratingarray[0],id=idarray[0])
+    return ratings()
+    # return 'succes'
 
 if __name__ == "__main__":
     app.secret_key = 'bismillah'

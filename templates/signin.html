@@ -175,6 +175,9 @@
 		  </div>
 		  <div class="ui error message"></div>
 	  </form>
+      {% if error %}
+    <p class=error><strong>Error:</strong> {{ error }}
+      {% endif %}
 	</div>
 
 
