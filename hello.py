@@ -139,10 +139,21 @@ def home():
         vector_sizes = vector_sizes.as_matrix()
         vector_sizes = pd.DataFrame(vector_sizes, columns = ['title' , 'ratingCount']).sort_values('ratingCount').reset_index(drop = True)
 
+        def fav_movies(current_user):
+            fav_movies = pd.DataFrame.sort_values(movieLens[movieLens.userId == current_user], ['rating'], ascending = [0])
+            fav_movies = fav_movies[['title','genres','rating']]
+            return fav_movies
+
+        fav_movies = fav_movies(userId)
+        if len(fav_movies) == 0:
+            fav_movies=0
+        else:
+            fav_movies = json.loads(fav_movies.to_json(orient='records'))
+
         top_rating = movie_list.sort_values(['avgRating'],ascending=False).head(10)
         top_popular = vector_sizes.sort_values(['ratingCount'],ascending=False).head(10)
-        return render_template("home.html", name=name, userId=userId, top_movie_tables=[top_rating.to_html(classes='top_rating')],
-        pop_movie_tables=[top_popular.to_html(classes='top_popular')])
+        return render_template("home.html", name=name, userId=userId, fav_movies=fav_movies, top_movie_tables=[top_rating.to_html(classes='ui definition table')],
+        pop_movie_tables=[top_popular.to_html(classes='ui definition table')])
         # top_popular = movieLens.title.value_counts().head(10)
 
 @app.route('/signin', methods=['GET', 'POST'])

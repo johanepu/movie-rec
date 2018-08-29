@@ -9,28 +9,10 @@
 
   <!-- Site Properties -->
   <title>Homepage</title>
-  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/reset.css') }}">
-  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/site.css') }}">
-
-  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/container.css') }}">
-  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/grid.css') }}">
-  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/header.css') }}">
-  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/image.css') }}">
-  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/menu.css') }}">
-
-  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/divider.css') }}">
-  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/dropdown.css') }}">
-  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/segment.css') }}">
-  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/button.css') }}">
-  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/list.css') }}">
-  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/icon.css') }}">
-  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/sidebar.css') }}">
-  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/transition.css') }}">
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='node_modules/semantic-ui/dist/semantic.min.css') }}">
 
   <script src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js') }}"></script>
-  <script src="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/visibility.js') }}"></script>
-  <script src="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/sidebar.js') }}"></script>
-  <script src="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/transition.js') }}"></script>
+  <script src="{{ url_for('static', filename='node_modules/semantic-ui/dist/semantic.min.js') }}"></script>
 
 
   <style type="text/css">
@@ -146,6 +128,10 @@
         .sidebar('attach events', '.toc.item')
       ;
 
+      $("#rec_click").click(function () {
+              $("#rec_click").addClass('loading');
+          });
+
     })
   ;
   </script>
@@ -220,7 +206,13 @@
         Home | {{ name }}
       </h1>
       <h2>Click button to get movie recommendation | userID : {{ userId }}.</h2>
-      <a href="{{ url_for('get_recommendation2') }}" class="ui huge primary button">Get Recommendations <i class="right arrow icon"></i></a>
+      {% if fav_movies|length < 5 %}
+      <p>You must have at least 5 movie rating</p>
+      <a href="#" class="ui disabled huge button" >Get Recommendations <i class="right arrow icon"></i></a>
+      {% else %}
+      <a href="{{ url_for('get_recommendation2') }}" id="rec_click" class="ui rec huge primary button">Get Recommendations
+        <i class="right arrow icon"></i></a>
+      {% endif %}
     </div>
 
   </div>
@@ -230,7 +222,7 @@
       <div class="row">
         <div class="eight wide column">
           <h3 class="ui header">Top Popular Movies</h3>
-          <div class=page>
+          <div class=table>
             <h1>Movies</h1>
             {% for table in pop_movie_tables %}
 
@@ -238,7 +230,7 @@
             {% endfor %}
           </div>
           <h3 class="ui header">Top Rated Movies</h3>
-          <div class=page>
+          <div class=table>
             <h1>Movies</h1>
             {% for table in top_movie_tables %}
 
@@ -254,6 +246,7 @@
       </div>
     </div>
   </div>
+
 
 
   <div class="ui inverted vertical footer segment">
