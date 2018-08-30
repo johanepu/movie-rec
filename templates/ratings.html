@@ -367,7 +367,7 @@
     </div>
 
     <div class="ui raised segments">
-    {% if fav_movies==0 %}
+    {% if fav_movies!=0 %}
       {%for item in fav_movies %}
       <div class="ui grid clearing left aligned segment" style="margin-top:0">
         <div class="ten wide column">
@@ -381,7 +381,9 @@
       {% endfor %}
     {% else %}
     <div class="ui grid clearing left aligned segment" style="margin-top:0">
+      </br>
       <h3>You don't have any rating(s) yet, click button below to add rating</h3>
+      </br>
     </div>
     {% endif %}
       <div class="ui bottom attached button add_field_button">Add Rating</div>

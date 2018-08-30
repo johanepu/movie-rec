@@ -146,7 +146,7 @@ def home():
 
         fav_movies = fav_movies(userId)
         if len(fav_movies) == 0:
-            fav_movies=0
+            fav_movies=[{}]
         else:
             fav_movies = json.loads(fav_movies.to_json(orient='records'))
 
@@ -466,8 +466,8 @@ def ratings():
 
     current_user = session.get('id')
     fav_movies = fav_movies(current_user)
-    if len(fav_movies) == 0:
-        fav_movies=[{}]
+    if len(fav_movies) < 1:
+        fav_movies=0
     else:
         fav_movies = json.loads(fav_movies.to_json(orient='records'))
     source = source()
