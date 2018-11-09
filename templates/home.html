@@ -104,11 +104,66 @@
 
 
   </style>
-
-
   <script>
   $(document)
     .ready(function() {
+      $('img[name=imdbId]').each(function(){
+        $('.ui.rating')
+          .rating({
+            initialRating: 3,
+            maxRating: 5
+          })
+        ;
+        mov_id = this.alt;
+        id = this.id;
+        console.log(mov_id);
+        console.log(id);
+        var link = 'raiso';
+        getPoster(mov_id, id, function(url) {
+            console.log(url);
+            console.log(id);
+            // document.getElementById(id).src = url;
+            // link = url;
+            // return link;
+        });
+
+      });
+
+      $('img[name=imdbId2]').each(function(){
+        $('.ui.rating')
+          .rating({
+            initialRating: 3,
+            maxRating: 5
+          })
+        ;
+        mov_id = this.alt;
+        id = this.id;
+        console.log(mov_id);
+        console.log(id);
+        var link = 'raiso';
+        getPoster(mov_id, id, function(url) {
+            console.log(url);
+            console.log(id);
+            // document.getElementById(id).src = url;
+            // link = url;
+            // return link;
+        });
+
+      });
+
+      function getPoster(mov_id, id, callback) {
+        var img = "{{ url_for('static', filename='assets/images/not-available.jpg') }}";
+        $.getJSON(mov_id).then(function(response){
+          img = response.Poster;
+          document.getElementById(id).src = img;
+          callback(img);
+        });
+      }
+
+      $('.ui.rating')
+        .rating('setting', 'clearable', true)
+      ;
+
 
       // fix menu when passed
       $('.masthead')
@@ -161,7 +216,6 @@
     </div>
   </div>
 </div>
-
 <!-- Sidebar Menu -->
 <div class="ui vertical inverted sidebar menu">
   <a href="{{ url_for('home') }}" class="active item">Home</a>
@@ -217,8 +271,57 @@
 
   </div>
 
+
   <div class="ui vertical stripe segment">
+    <div class="ui middle aligned container">
+      <h3 class="ui header">Top Rated Movies</h3>
+        <div id="imgdiv" class="ui five column grid">
+          {%for item in top_rating %}
+          <div class="column">
+            <div class="ui fluid card">
+              <div class="image">
+                <img id="img{{loop.index}}"alt="http://www.omdbapi.com/?apikey=c4a1ba1d&i=tt{{ item['imdbId'] }}" name='imdbId'
+                src="{{ url_for('static', filename='assets/images/not-available.jpg') }}">
+              </div>
+              <div class="content">
+                <a onclick='getImage({{ item['imdbId'] }});' class="header">{{ item['title'] }}</a>
+              </div>
+              <div class="extra">
+                Average Rating: {{ item['avgRating'] }}
+                <div class="ui star rating" data-rating='{{ item['avgRating']|round }}'></div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+      </div>
+    </div>
+
+    <div class="ui vertical stripe segment">
+      <div class="ui middle aligned container">
+        <h3 class="ui header">Top Popular Movies</h3>
+          <div id="imgdiv2" class="ui five column grid">
+            {%for item in top_popular %}
+            <div class="column">
+              <div class="ui fluid card">
+                <div class="image">
+                  <img id="img2_{{loop.index}}"alt="http://www.omdbapi.com/?apikey=c4a1ba1d&i=tt{{ item['imdbId'] }}" name='imdbId2'
+                  src="{{ url_for('static', filename='assets/images/not-available.jpg') }}">
+                </div>
+                <div class="content">
+                  <a onclick='getImage({{ item['imdbId'] }});' class="header">{{ item['title'] }}</a>
+                </div>
+                <div class="extra">
+                  Total Rating: {{ item['totalRatingCount'] }}
+                  <div class="ui star rating" data-rating='{{ item['avgRating']|round }}'></div>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+        </div>
+      </div>
+
     <div class="ui middle aligned stackable grid container">
+<!--
       <div class="row">
         <div class="eight wide column">
           <h3 class="ui header">Top Popular Movies</h3>
@@ -238,7 +341,7 @@
             {% endfor %}
           </div>
         </div>
-      </div>
+      </div> -->
       <div class="row">
         <div class="center aligned column">
           <a class="ui huge button">Check Them Out</a>
@@ -248,7 +351,7 @@
   </div>
 
 
-
+  Rendered in {{ g.request_time() }}
   <div class="ui inverted vertical footer segment">
     <div class="ui container">
       <div class="ui stackable inverted divided equal height stackable grid">
@@ -280,5 +383,6 @@
 </div>
 
 </body>
+
 
 </html>

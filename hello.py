@@ -10,16 +10,108 @@ import math
 import os
 import nltk
 from nltk.corpus import wordnet as wn
-from scipy.spatial.distance import euclidean
+from scipy.spatial.distance import cosine
 import time
 from hashlib import md5
 import json
+from imdb import IMDb
 
 app = Flask(__name__)
 app.secret_key = 'bismillah'
 app.config['DEBUG'] = True
 
 class ServerError(Exception):pass
+
+#preprocess
+movie_data = pd.read_csv('dataset/movies.csv')
+rating_info = pd.read_csv('dataset/ratings.csv')
+movie_info = pd.merge(movie_data, rating_info, left_on = 'movieId', right_on = 'movieId')
+
+def fav_movies(current_user, N):
+    fav_movies = pd.DataFrame.sort_values(movie_info[movie_info.userId == current_user], ['rating'], ascending = [0]) [:N]
+    return fav_movies
+
+# Now, we will find the similarity between 2 users by using correlation
+# Let's create a matrix that has the user ids on one axis and the movie title on another axis. # Let's
+# Each cell will then consist of the rating the user gave to that movie.
+
+# Lets build recommendation engine now
+
+# We will use a neighbour based collaborative filtering model.
+# The idea is to use k-nearest neighbour algorithm to find neighbours of a user
+# We will use their ratings to predict ratings of a movie not already rated by a current user.
+# We will represent movies watched by a user in a vector - the vector will have values for all the movies in our dataset. If a user hasn't rated a movie, it would be represented as NaN.
+
+user_movie_rating_matrix  = pd.pivot_table(movie_info, values = 'rating', index=['userId'], columns=['movieId'])
+user_movie_rating_matrix.head()
+
+def similarity(user1, user2):
+    # normalizing user1 rating i.e mean rating of user1 for any movie
+    # nanmean will return mean of an array after ignore NaN values
+    user1 = np.array(user1) - np.nanmean(user1)
+    user2 = np.array(user2) - np.nanmean(user2)
+
+    # finding the similarity between 2 users
+    # finding subset of movies rated by both the users
+    common_movie_ids = [i for i in range(len(user1)) if user1[i] > 0 and user2[i] > 0]
+    if(len(common_movie_ids) == 0):
+        return 0
+    else:
+        user1 = np.array([user1[i] for i in common_movie_ids])
+        user2 = np.array([user2[i] for i in common_movie_ids])
+        return cosine(user1, user2)
+
+# We will now use the similarity function to find the nearest neighbour of a current user
+# nearest_neighbour_ratings function will find the k nearest neighbours of the current user and
+# then use their ratings to predict the current users ratings for other unrated movies
+def nearest_neighbour_ratings(current_user, K):
+     # Creating an empty matrix whose row index is userId and the value
+    # will be the similarity of that user to the current user
+    similarity_matrix = pd.DataFrame(index = user_movie_rating_matrix.index,
+                                    columns = ['similarity'])
+    for i in user_movie_rating_matrix.index:
+        # finding the similarity between user i and the current user and add it to the similarity matrix
+        similarity_matrix.loc[i] = similarity(user_movie_rating_matrix.loc[current_user],
+                                             user_movie_rating_matrix.loc[i])
+        # Sorting the similarity matrix in descending order
+    similarity_matrix = pd.DataFrame.sort_values(similarity_matrix,
+                                                ['similarity'], ascending= [0])
+    # now we will pick the top k nearest neighbour
+    # neighbour_movie_ratings : ratings of movies of neighbors
+    # user_movie_rating_matrix : ratings of each user for every movie
+    # predicted_rating : Averge where rating is NaN
+    nearest_neighbours = similarity_matrix[:K]
+    neighbour_movie_ratings = user_movie_rating_matrix.loc[nearest_neighbours.index]
+     # This is empty dataframe placeholder for predicting the rating of current user using neighbour movie ratings
+    predicted_movie_rating = pd.DataFrame(index = user_movie_rating_matrix.columns, columns = ['rating'])
+    # Iterating all movies for a current user
+    for i in user_movie_rating_matrix.columns:
+        # by default, make predicted rating as the average rating of the current user
+        predicted_rating = np.nanmean(user_movie_rating_matrix.loc[current_user])
+          # j is user , i is movie
+        for j in neighbour_movie_ratings.index:
+            # if user j has rated the ith movie
+            if(user_movie_rating_matrix.loc[j,i] > 0):# If there is some rating  # nearest_neighbours.loc[j, 'similarity']) / nearest_neighbours['similarity'].sum(): Finding Similarity score
+                predicted_rating += ((user_movie_rating_matrix.loc[j,i] - np.nanmean(user_movie_rating_matrix.loc[j])) *
+                                                    nearest_neighbours.loc[j, 'similarity']) / nearest_neighbours['similarity'].sum()
+
+        predicted_movie_rating.loc[i, 'rating'] = predicted_rating
+
+    return predicted_movie_rating
+
+# Predicting top N recommendations for a current user
+def top_n_recommendations(current_user, N):
+    predicted_movie_rating = nearest_neighbour_ratings(current_user, 4)
+    movies_already_watched = list(user_movie_rating_matrix.loc[current_user]
+                                  .loc[user_movie_rating_matrix.loc[current_user] > 0].index)
+
+    predicted_movie_rating = predicted_movie_rating.drop(movies_already_watched)
+
+    top_n_recommendations = pd.DataFrame.sort_values(predicted_movie_rating, ['rating'], ascending=[0])[:N]
+
+    top_n_recommendation_titles = movie_data.loc[movie_data.movieId.isin(top_n_recommendations.index)]
+
+    return top_n_recommendation_titles
 
 #checkpoint timer
 @app.before_request
@@ -117,6 +209,7 @@ def panda_rating():
 
 @app.route('/home/')
 def home():
+    t = request.values.get('t', 0)
     if not session.get('logged_in'):
         return render_template('signin.html')
     else:
@@ -124,20 +217,30 @@ def home():
         userId = session.get('id')
         data_movies = pd.read_csv('dataset/movies.csv')
         data_ratings = pd.read_csv('dataset/ratings.csv')
-        movieLens = pd.merge(data_ratings, data_movies, left_on = 'movieId', right_on = 'movieId')
-        data_merged = movieLens[['userId', 'movieId', 'title', 'rating']]
+        data_links = pd.read_csv('dataset/links.csv', usecols = [0,1], dtype={'imdbId':str} )
 
-        movie_list = (((data_merged.sort_values(by = 'movieId')).groupby('title')))['movieId', 'title', 'rating']
-        movie_list = movie_list.mean()
+
+        combine_movie_rating = pd.merge(data_ratings, data_movies, on='movieId')
+        combine_movie_rating = pd.merge(combine_movie_rating, data_links, on='movieId')
+        combine_movie_rating = combine_movie_rating.dropna(axis = 0, subset = ['title'])
+
+        movie_ratingCount = (combine_movie_rating.
+             groupby(by = ['title'])['rating'].
+             count().
+             reset_index().
+             rename(columns = {'rating': 'totalRatingCount'})
+             [['title', 'totalRatingCount']]
+            )
+        rating_with_totalRatingCount = combine_movie_rating.merge(movie_ratingCount, left_on = 'title', right_on = 'title', how = 'left')
+        popularity_threshold = 50
+        rating_popular_movie = rating_with_totalRatingCount.query('totalRatingCount >= @popularity_threshold')
+        good_popular = (((rating_popular_movie.sort_values(by = 'movieId')).groupby('title')))['movieId', 'title', 'rating','totalRatingCount', 'imdbId']
+        movie_list = good_popular.mean()
         movie_list['title'] = movie_list.index
+        movie_list = movie_list.merge(data_links, left_on = 'movieId', right_on = 'movieId', how = 'left')
         movie_list = movie_list.as_matrix()
-        movie_list = pd.DataFrame(movie_list, columns = ['movieId', 'avgRating', 'title']).sort_values('movieId').reset_index(drop = True)
 
-        # vector_sizes = data_merged.groupby('movieId')['userId'].nunique().sort_values(ascending=False)
-        vector_sizes = data_merged.groupby('title')['title', 'userId'].nunique().sort_values(by = 'title', ascending=False)
-        vector_sizes['title'] = vector_sizes.index
-        vector_sizes = vector_sizes.as_matrix()
-        vector_sizes = pd.DataFrame(vector_sizes, columns = ['title' , 'ratingCount']).sort_values('ratingCount').reset_index(drop = True)
+        movieLens = pd.merge(data_ratings, data_movies, left_on = 'movieId', right_on = 'movieId')
 
         def fav_movies(current_user):
             fav_movies = pd.DataFrame.sort_values(movieLens[movieLens.userId == current_user], ['rating'], ascending = [0])
@@ -150,10 +253,16 @@ def home():
         else:
             fav_movies = json.loads(fav_movies.to_json(orient='records'))
 
-        top_rating = movie_list.sort_values(['avgRating'],ascending=False).head(10)
-        top_popular = vector_sizes.sort_values(['ratingCount'],ascending=False).head(10)
-        return render_template("home.html", name=name, userId=userId, fav_movies=fav_movies, top_movie_tables=[top_rating.to_html(classes='ui definition table')],
-        pop_movie_tables=[top_popular.to_html(classes='ui definition table')])
+        top_rating = pd.DataFrame(movie_list, columns = ['movieId', 'avgRating','totalRatingCount','title', 'imdbId' ]).sort_values(['avgRating', 'totalRatingCount'], ascending=[False, False]).reset_index(drop = True).head(10)
+        top_popular = pd.DataFrame(movie_list, columns = ['movieId', 'avgRating','totalRatingCount','title', 'imdbId' ]).sort_values(['totalRatingCount'], ascending=[False]).reset_index(drop = True).head(10)
+
+
+        top_rating_json = json.loads(top_rating.to_json(orient='records'))
+        top_popular_json = json.loads(top_popular.to_json(orient='records'))
+
+
+        time.sleep(float(t)) #just to show it works...
+        return render_template("home.html", name=name, userId=userId, fav_movies=fav_movies, top_rating=top_rating_json, top_popular=top_popular_json)
         # top_popular = movieLens.title.value_counts().head(10)
 
 @app.route('/signin', methods=['GET', 'POST'])
@@ -340,106 +449,14 @@ def get_recommendation2():
     # if request.method == 'POST':
     #     current_user = request.form['userId']
 
-    #preprocess
-    movie_data = pd.read_csv('dataset/movies.csv')
-    rating_info = pd.read_csv('dataset/ratings.csv')
-    movie_info = pd.merge(movie_data, rating_info, left_on = 'movieId', right_on = 'movieId')
-
-    def fav_movies(current_user, N):
-        fav_movies = pd.DataFrame.sort_values(movie_info[movie_info.userId == current_user], ['rating'], ascending = [0]) [:N]
-        return fav_movies
-
-    # Now, we will find the similarity between 2 users by using correlation
-    # Let's create a matrix that has the user ids on one axis and the movie title on another axis. # Let's
-    # Each cell will then consist of the rating the user gave to that movie.
-
-                                    # Lets build recommendation engine now
-
-    # We will use a neighbour based collaborative filtering model.
-    # The idea is to use k-nearest neighbour algorithm to find neighbours of a user
-    # We will use their ratings to predict ratings of a movie not already rated by a current user.
-    # We will represent movies watched by a user in a vector - the vector will have values for all the movies in our dataset. If a user hasn't rated a movie, it would be represented as NaN.
-
-
-
-    user_movie_rating_matrix  = pd.pivot_table(movie_info, values = 'rating', index=['userId'], columns=['movieId'])
-    user_movie_rating_matrix.head()
-
-    def similarity(user1, user2):
-        # normalizing user1 rating i.e mean rating of user1 for any movie
-        # nanmean will return mean of an array after ignore NaN values
-        user1 = np.array(user1) - np.nanmean(user1)
-        user2 = np.array(user2) - np.nanmean(user2)
-
-        # finding the similarity between 2 users
-        # finding subset of movies rated by both the users
-        common_movie_ids = [i for i in range(len(user1)) if user1[i] > 0 and user2[i] > 0]
-        if(len(common_movie_ids) == 0):
-            return 0
-        else:
-            user1 = np.array([user1[i] for i in common_movie_ids])
-            user2 = np.array([user2[i] for i in common_movie_ids])
-            return euclidean(user1, user2)
-
-    # We will now use the similarity function to find the nearest neighbour of a current user
-    # nearest_neighbour_ratings function will find the k nearest neighbours of the current user and
-    # then use their ratings to predict the current users ratings for other unrated movies
-    def nearest_neighbour_ratings(current_user, K):
-         # Creating an empty matrix whose row index is userId and the value
-        # will be the similarity of that user to the current user
-        similarity_matrix = pd.DataFrame(index = user_movie_rating_matrix.index,
-                                        columns = ['similarity'])
-        for i in user_movie_rating_matrix.index:
-            # finding the similarity between user i and the current user and add it to the similarity matrix
-            similarity_matrix.loc[i] = similarity(user_movie_rating_matrix.loc[current_user],
-                                                 user_movie_rating_matrix.loc[i])
-            # Sorting the similarity matrix in descending order
-        similarity_matrix = pd.DataFrame.sort_values(similarity_matrix,
-                                                    ['similarity'], ascending= [0])
-        # now we will pick the top k nearest neighbour
-        # neighbour_movie_ratings : ratings of movies of neighbors
-        # user_movie_rating_matrix : ratings of each user for every movie
-        # predicted_rating : Averge where rating is NaN
-        nearest_neighbours = similarity_matrix[:K]
-        neighbour_movie_ratings = user_movie_rating_matrix.loc[nearest_neighbours.index]
-         # This is empty dataframe placeholder for predicting the rating of current user using neighbour movie ratings
-        predicted_movie_rating = pd.DataFrame(index = user_movie_rating_matrix.columns, columns = ['rating'])
-        # Iterating all movies for a current user
-        for i in user_movie_rating_matrix.columns:
-            # by default, make predicted rating as the average rating of the current user
-            predicted_rating = np.nanmean(user_movie_rating_matrix.loc[current_user])
-              # j is user , i is movie
-            for j in neighbour_movie_ratings.index:
-                # if user j has rated the ith movie
-                if(user_movie_rating_matrix.loc[j,i] > 0):# If there is some rating  # nearest_neighbours.loc[j, 'similarity']) / nearest_neighbours['similarity'].sum(): Finding Similarity score
-                    predicted_rating += ((user_movie_rating_matrix.loc[j,i] - np.nanmean(user_movie_rating_matrix.loc[j])) *
-                                                        nearest_neighbours.loc[j, 'similarity']) / nearest_neighbours['similarity'].sum()
-
-            predicted_movie_rating.loc[i, 'rating'] = predicted_rating
-
-        return predicted_movie_rating
-
-    # Predicting top N recommendations for a current user
-    def top_n_recommendations(current_user, N):
-        predicted_movie_rating = nearest_neighbour_ratings(current_user, 4)
-        movies_already_watched = list(user_movie_rating_matrix.loc[current_user]
-                                      .loc[user_movie_rating_matrix.loc[current_user] > 0].index)
-
-        predicted_movie_rating = predicted_movie_rating.drop(movies_already_watched)
-
-        top_n_recommendations = pd.DataFrame.sort_values(predicted_movie_rating, ['rating'], ascending=[0])[:N]
-
-        top_n_recommendation_titles = movie_data.loc[movie_data.movieId.isin(top_n_recommendations.index)]
-
-        return top_n_recommendation_titles
 
     current_user = session.get('id')
-    fav_movies = fav_movies(current_user, 5)
+    favourite_movies = fav_movies(current_user, 5)
     recommendations = top_n_recommendations(current_user, 5)
 
     time.sleep(float(t)) #just to show it works...
 
-    return render_template('result.html', fav_movies=[fav_movies.to_html(classes='ui definition table')],
+    return render_template('result.html', fav_movies=[favourite_movies.to_html(classes='ui definition table')],
     recommendations=[recommendations.to_html(classes='ui definition table')],
     titles = ['na', 'Movie List'])
 
@@ -482,11 +499,11 @@ def ratings():
 def insert_rating():
     if request.method == 'POST':
         userId = session.get('id')
-        id_input  = request.form['idarray[]']
-        rating_input  = request.form['ratingarray[]']
+        id_input  = request.form.getlist('id[]')
+        rating_input  = request.form.getlist('rating[]')
 
-        ratingarray = rating_input.split(",")
-        idarray = id_input.split(",")
+        # idarray = id_input.split(",")
+        # ratingarray = rating_input.split(",")
 
         # import csv
         # fields=['first','second','third']
@@ -503,17 +520,17 @@ def insert_rating():
             #     writer.writerow({'userId': userId, 'movieId': idarray[i], 'rating': ratingarray[i], 'timestamp': '123445667'})
             #     i+1
 
-        row = [userId, idarray[0], ratingarray[0], '12345567']
+        row = [userId, id_input[0], rating_input[0], '12345567']
 
         with open('dataset/ratings.csv', 'a', newline='') as csvFile:
             writer = csv.writer(csvFile)
             i=0
-            while i < len(idarray):
-                writer.writerow([userId, idarray[i], ratingarray[i], '12345567'])
+            while i < len(id_input):
+                writer.writerow([userId, id_input[i], rating_input[i], '12345567'])
                 i += 1
         csvFile.close()
 
-    # return render_template('test.html',rating=ratingarray[0],id=idarray[0])
+    # return render_template('test.html',rating=id_input[1],id=rating_input[1])
     return ratings()
     # return 'succes'
 

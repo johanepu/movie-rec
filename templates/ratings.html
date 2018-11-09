@@ -181,7 +181,6 @@
         var x = 0; //initlal text box count
         $('.submit.button').hide();
         $(add_button).click(function(e){ //on add input button click
-            e.preventDefault();
             if (x <= 0) {
             } else {
               $('.submit.button').show();
@@ -201,9 +200,9 @@
                     '</div>'+
                   '</div>'+
                   '<div class=" five wide column">'+
-                    '<div class="ui star rating">'+
-                      '<input type="text" name="rating[]" id="rating'+x+'" hidden>'+
+                    '<div class="ui star rating" id="star'+x+'">'+
                     '</div>'+
+                    '<input type="text" name="rating[]" id="rating'+x+'" class="rate" required hidden>'+
                   '</div>'+
                   '<div class=" two wide column">'+
                     '<button class="ui icon button remove_field">'+
@@ -211,29 +210,35 @@
                     '</button>'+
                   '</div></div>'); //add input box
             }
-            $('.ui.rating')
-              .rating({
-                initialRating: 0,
-                maxRating: 5
-              })
+
+            $('#star'+x)
+            .rating({
+              initialRating: 0,
+              maxRating: 5
+            })
             ;
+            $('.ui.rating')
+            .rating('setting', 'onRate', function(value) {
+              // var rating = $(this).prop('id');
+              var ratings = $("input[name=rating]");
+              var rating = $( "#rating"+x );
+              // $(this).find('.rate').val(value);
+              rating.val(value);
+              // ratings.push(rating.val())
+
+              // rating.attr("data-rating",value);
+              // var inputr = $('input[name="ratingarray[]"]');
+              // var rating = $('input[name="rating[]"]');
+              // ratingarray.push(value);
+              // inputr.val(ratingarray);
+              console.log(ratings);
+              // // console.log(inputr.val());
+            });
             var content = [
               {%for item in source %}
               { category: '{{ item['movieId'] }}', title: '{{ item['title'] }}' },
               {% endfor %}
             ];
-
-            $('.ui.rating')
-            .rating('setting', 'onRate', function(value) {
-              var rating = $( '#rating'+x);
-              rating.attr("data-rating",value);
-              var inputr = $('input[name="ratingarray[]"]');
-              // var rating = $('input[name="rating[]"]');
-              ratingarray.push(value);
-              inputr.val(ratingarray);
-              console.log(rating.val());
-              console.log(inputr.val());
-            });
 
             $('.ui.search')
               .search({
@@ -241,17 +246,21 @@
                 source: content,
                 onSelect: function(result){
                     var movieId = $( "#id"+x );
-                    var inputi = $('input[name="idarray[]"]');
+                    var id_output = $("input[name=id]");
+                    // var inputi = $('input[name="idarray[]"]');
                     // var movieId = $('input[name="id[]"]');
                     movieId.val(result.category);
-                    idarray.push(result.category);
-                    inputi.val(idarray);
-                    console.log(movieId.val());
-                    console.log(inputi.val());
+                    // id_output.push(movieId.val())
+                    // idarray.push(result.category);
+                    // inputi.val(idarray);
+                    console.log(id_output);
+                    // console.log(inputi.val());
                 },
               })
             ;
         });
+
+
 
         $(wrapper).on("click",".remove_field", function(e){ //user click on remove text
             e.preventDefault(); $(this).parent().parent('div').remove(); x--;
