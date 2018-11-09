@@ -8,33 +8,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 
     <!-- Site Properties -->
-    <title>Homepage - {{ name }}</title>
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/reset.css') }}">
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/site.css') }}">
-
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/container.css') }}">
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/grid.css') }}">
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/header.css') }}">
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/image.css') }}">
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/menu.css') }}">
-
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/divider.css') }}">
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/dropdown.css') }}">
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/segment.css') }}">
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/button.css') }}">
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/list.css') }}">
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/icon.css') }}">
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/sidebar.css') }}">
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/table.css') }}">
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/transition.css') }}">
-
+    <title>Recommendations</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='node_modules/semantic-ui/dist/semantic.min.css') }}">
 
     <script src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='node_modules/datatables/js/jquery.dataTables.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='node_modules/datatables/js/dataTables.semanticui.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/visibility.js') }}"></script>
-    <script src="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/sidebar.js') }}"></script>
-    <script src="{{ url_for('static', filename='node_modules/semantic-ui/dist/components/transition.js') }}"></script>
+    <script src="{{ url_for('static', filename='node_modules/semantic-ui/dist/semantic.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='node_modules/semantic-ui/javascript/tablesort.js') }}"></script>
 
     <style type="text/css">
 
@@ -43,7 +22,6 @@
       }
 
       .masthead.segment {
-        min-height: 700px;
         padding: 1em 0em;
       }
       .masthead .logo.item img {
@@ -63,9 +41,6 @@
         font-weight: normal;
       }
 
-      .ui.vertical.stripe {
-        padding: 8em 0em;
-      }
       .ui.vertical.stripe h3 {
         font-size: 2em;
       }
@@ -139,7 +114,37 @@
     $(document)
       .ready(function() {
 
-        $('#movie_list').DataTable();
+        $('img[name=imdbId]').each(function(){
+          $('.ui.rating')
+            .rating({
+              initialRating: 3,
+              maxRating: 5
+            })
+          ;
+          mov_id = this.alt;
+          id = this.id;
+          console.log(mov_id);
+          console.log(id);
+          var link = 'raiso';
+          getPoster(mov_id, id, function(url) {
+              console.log(url);
+              console.log(id);
+              // document.getElementById(id).src = url;
+              // link = url;
+              // return link;
+          });
+
+        });
+
+
+        function getPoster(mov_id, id, callback) {
+          var img = "{{ url_for('static', filename='assets/images/not-available.jpg') }}";
+          $.getJSON(mov_id).then(function(response){
+            img = response.Poster;
+            document.getElementById(id).src = img;
+            callback(img);
+          });
+        }
 
         // fix menu when passed
         $('.masthead')
@@ -157,6 +162,12 @@
         // create sidebar and attach to menu open
         $('.ui.sidebar')
           .sidebar('attach events', '.toc.item')
+        ;
+        $('.ui.accordion')
+          .accordion()
+        ;
+        $('table')
+          .tablesort()
         ;
       })
     ;
@@ -228,20 +239,56 @@
         </div>
       </div>
     </div>
-
-  <div class=table>
-    <h1> Fav Movies</h1>
-    {% for table in fav_movies %}
-      {{ table|safe }}
-    {% endfor %}
   </div>
 
-  <div class=table>
-    <h1>Recommendations</h1>
-    {% for table in recommendations %}
-      {{ table|safe }}
-    {% endfor %}
+  <div class="ui vertical stripe segment" style="margin-top:10px">
+    <div class="ui middle aligned container">
+      <h3 class="ui header">Recommended Movies</h3>
+        <div id="result" class="ui five column grid">
+          {%for item in recommendations %}
+          <div class="column">
+            <div class="ui fluid card">
+              <div class="image">
+                <img id="img{{loop.index}}"alt="http://www.omdbapi.com/?apikey=c4a1ba1d&i=tt{{ item['imdbId'] }}" name='imdbId'
+                src="{{ url_for('static', filename='assets/images/not-available.jpg') }}">
+              </div>
+              <div class="content">
+                <a onclick='getImage({{ item['imdbId'] }});' class="header">{{ item['title'] }}</a>
+              </div>
+              <div class="extra">
+                {{ item['genres'] }}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+      </div>
+    </div>
+    <h3 class="ui header">Computation Details</h3>
+    <div class="ui styled fluid accordion">
+      <div class="title ui header">
+        <i class="dropdown icon"></i>
+        Similarity Table
+      </div>
+      <div class="content active">
+        <table class="ui sortable celled table">
+          <thead>
+          <tr>
+            <th class="four wide">User Id</th>
+            <th class="sorted descending six wide">Similarity</th>
+          </tr></thead>
+          <tbody>
+            {%for item in neighbours %}
+            <tr>
+              <td>{{ item['userId'] }}</td>
+              <td>{{ item['similarity'] }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
+
 
 Rendered in {{ g.request_time() }}
 
@@ -272,7 +319,6 @@ Rendered in {{ g.request_time() }}
       </div>
     </div>
   </div>
-</div>
 </div>
 
 

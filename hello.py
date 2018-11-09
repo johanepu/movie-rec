@@ -26,7 +26,9 @@ class ServerError(Exception):pass
 movie_data = pd.read_csv('dataset/movies.csv')
 rating_info = pd.read_csv('dataset/ratings.csv')
 movie_info = pd.merge(movie_data, rating_info, left_on = 'movieId', right_on = 'movieId')
-
+data_movies = pd.read_csv('dataset/movies.csv')
+data_ratings = pd.read_csv('dataset/ratings.csv')
+data_links = pd.read_csv('dataset/links.csv', usecols = [0,1], dtype={'imdbId':str} )
 def fav_movies(current_user, N):
     fav_movies = pd.DataFrame.sort_values(movie_info[movie_info.userId == current_user], ['rating'], ascending = [0]) [:N]
     return fav_movies
@@ -64,6 +66,7 @@ def similarity(user1, user2):
 # We will now use the similarity function to find the nearest neighbour of a current user
 # nearest_neighbour_ratings function will find the k nearest neighbours of the current user and
 # then use their ratings to predict the current users ratings for other unrated movies
+global nearest_neighbours
 def nearest_neighbour_ratings(current_user, K):
      # Creating an empty matrix whose row index is userId and the value
     # will be the similarity of that user to the current user
@@ -81,6 +84,7 @@ def nearest_neighbour_ratings(current_user, K):
     # user_movie_rating_matrix : ratings of each user for every movie
     # predicted_rating : Averge where rating is NaN
     nearest_neighbours = similarity_matrix[:K]
+    nearest_neighbour_ratings.table_neighbours = nearest_neighbours
     neighbour_movie_ratings = user_movie_rating_matrix.loc[nearest_neighbours.index]
      # This is empty dataframe placeholder for predicting the rating of current user using neighbour movie ratings
     predicted_movie_rating = pd.DataFrame(index = user_movie_rating_matrix.columns, columns = ['rating'])
@@ -101,7 +105,7 @@ def nearest_neighbour_ratings(current_user, K):
 
 # Predicting top N recommendations for a current user
 def top_n_recommendations(current_user, N):
-    predicted_movie_rating = nearest_neighbour_ratings(current_user, 4)
+    predicted_movie_rating = nearest_neighbour_ratings(current_user, N)
     movies_already_watched = list(user_movie_rating_matrix.loc[current_user]
                                   .loc[user_movie_rating_matrix.loc[current_user] > 0].index)
 
@@ -215,11 +219,6 @@ def home():
     else:
         name = session.get('name')
         userId = session.get('id')
-        data_movies = pd.read_csv('dataset/movies.csv')
-        data_ratings = pd.read_csv('dataset/ratings.csv')
-        data_links = pd.read_csv('dataset/links.csv', usecols = [0,1], dtype={'imdbId':str} )
-
-
         combine_movie_rating = pd.merge(data_ratings, data_movies, on='movieId')
         combine_movie_rating = pd.merge(combine_movie_rating, data_links, on='movieId')
         combine_movie_rating = combine_movie_rating.dropna(axis = 0, subset = ['title'])
@@ -241,11 +240,7 @@ def home():
         movie_list = movie_list.as_matrix()
 
         movieLens = pd.merge(data_ratings, data_movies, left_on = 'movieId', right_on = 'movieId')
-
-        def fav_movies(current_user):
-            fav_movies = pd.DataFrame.sort_values(movieLens[movieLens.userId == current_user], ['rating'], ascending = [0])
-            fav_movies = fav_movies[['title','genres','rating']]
-            return fav_movies
+        movieLens = pd.merge(movieLens, data_links, on='movieId')
 
         fav_movies = fav_movies(userId)
         if len(fav_movies) == 0:
@@ -454,10 +449,15 @@ def get_recommendation2():
     favourite_movies = fav_movies(current_user, 5)
     recommendations = top_n_recommendations(current_user, 5)
 
+    recommendations = pd.merge(recommendations, data_links, on='movieId')
+    recommendations = json.loads(recommendations.to_json(orient='records'))
+
+    nearest = nearest_neighbour_ratings.table_neighbours
+    neighbours = json.loads(nearest.reset_index().to_json(orient='records'))
     time.sleep(float(t)) #just to show it works...
 
-    return render_template('result.html', fav_movies=[favourite_movies.to_html(classes='ui definition table')],
-    recommendations=[recommendations.to_html(classes='ui definition table')],
+    return render_template('result.html',
+    recommendations=recommendations, neighbours=neighbours,
     titles = ['na', 'Movie List'])
 
 @app.route('/ratings')
