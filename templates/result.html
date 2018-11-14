@@ -262,30 +262,30 @@
           </div>
           {% endfor %}
       </div>
-    </div>
-    <h3 class="ui header">Computation Details</h3>
-    <div class="ui styled fluid accordion">
-      <div class="title ui header">
-        <i class="dropdown icon"></i>
-        Similarity Table
-      </div>
-      <div class="content active">
-        <table class="ui sortable celled table">
-          <thead>
-          <tr>
-            <th class="four wide">User Id</th>
-            <th class="sorted descending six wide">Similarity</th>
-          </tr></thead>
-          <tbody>
-            {%for item in neighbours %}
-            <tr>
-              <td>{{ item['userId'] }}</td>
-              <td>{{ item['similarity'] }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+      <h3 class="ui header">Computation Details</h3>
+      <div class="ui styled fluid accordion">
+        <div class="title ui header">
+          <i class="dropdown icon"></i>
+          Similarity Table
+        </div>
+        <div class="content active">
+          <table class="ui sortable celled table">
+            <thead>
+              <tr>
+                <th class="four wide">User Id</th>
+                <th class="sorted descending six wide">Similarity</th>
+              </tr></thead>
+              <tbody>
+                {%for item in neighbours %}
+                <tr>
+                  <td>{{ item['userId'] }}</td>
+                  <td>{{ item['similarity'] }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
     </div>
   </div>
 

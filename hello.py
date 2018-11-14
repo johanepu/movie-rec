@@ -33,6 +33,7 @@ def fav_movies(current_user, N):
     fav_movies = pd.DataFrame.sort_values(movie_info[movie_info.userId == current_user], ['rating'], ascending = [0]) [:N]
     return fav_movies
 
+
 # Now, we will find the similarity between 2 users by using correlation
 # Let's create a matrix that has the user ids on one axis and the movie title on another axis. # Let's
 # Each cell will then consist of the rating the user gave to that movie.
@@ -68,7 +69,7 @@ def similarity(user1, user2):
 # then use their ratings to predict the current users ratings for other unrated movies
 global nearest_neighbours
 def nearest_neighbour_ratings(current_user, K):
-     # Creating an empty matrix whose row index is userId and the value
+    # Creating an empty matrix whose row index is userId and the value
     # will be the similarity of that user to the current user
     similarity_matrix = pd.DataFrame(index = user_movie_rating_matrix.index,
                                     columns = ['similarity'])
@@ -242,11 +243,12 @@ def home():
         movieLens = pd.merge(data_ratings, data_movies, left_on = 'movieId', right_on = 'movieId')
         movieLens = pd.merge(movieLens, data_links, on='movieId')
 
-        fav_movies = fav_movies(userId)
-        if len(fav_movies) == 0:
-            fav_movies=[{}]
+        user_fav = fav_movies(userId, 10)
+        if len(user_fav) == 0:
+            user_fav=[{}]
         else:
-            fav_movies = json.loads(fav_movies.to_json(orient='records'))
+            user_fav = pd.merge(user_fav, data_links, on='movieId')
+            user_fav = json.loads(user_fav.to_json(orient='records'))
 
         top_rating = pd.DataFrame(movie_list, columns = ['movieId', 'avgRating','totalRatingCount','title', 'imdbId' ]).sort_values(['avgRating', 'totalRatingCount'], ascending=[False, False]).reset_index(drop = True).head(10)
         top_popular = pd.DataFrame(movie_list, columns = ['movieId', 'avgRating','totalRatingCount','title', 'imdbId' ]).sort_values(['totalRatingCount'], ascending=[False]).reset_index(drop = True).head(10)
@@ -257,7 +259,7 @@ def home():
 
 
         time.sleep(float(t)) #just to show it works...
-        return render_template("home.html", name=name, userId=userId, fav_movies=fav_movies, top_rating=top_rating_json, top_popular=top_popular_json)
+        return render_template("home.html", name=name, userId=userId, fav_movies=user_fav, top_rating=top_rating_json, top_popular=top_popular_json)
         # top_popular = movieLens.title.value_counts().head(10)
 
 @app.route('/signin', methods=['GET', 'POST'])
