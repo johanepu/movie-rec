@@ -67,23 +67,19 @@ def similarity(user1, user2):
 # We will now use the similarity function to find the nearest neighbour of a current user
 # nearest_neighbour_ratings function will find the k nearest neighbours of the current user and
 # then use their ratings to predict the current users ratings for other unrated movies
+
+# Creating an empty matrix whose row index is userId and the value
+# will be the similarity of that user to the current user
+similarity_matrix = pd.DataFrame(index = user_movie_rating_matrix.index,
+                                columns = ['similarity'])
+movies_already_watched = user_movie_rating_matrix
 global nearest_neighbours
 def nearest_neighbour_ratings(current_user, K):
-    # Creating an empty matrix whose row index is userId and the value
-    # will be the similarity of that user to the current user
-    similarity_matrix = pd.DataFrame(index = user_movie_rating_matrix.index,
-                                    columns = ['similarity'])
-    for i in user_movie_rating_matrix.index:
-        # finding the similarity between user i and the current user and add it to the similarity matrix
-        similarity_matrix.loc[i] = similarity(user_movie_rating_matrix.loc[current_user],
-                                             user_movie_rating_matrix.loc[i])
-        # Sorting the similarity matrix in descending order
-    similarity_matrix = pd.DataFrame.sort_values(similarity_matrix,
-                                                ['similarity'], ascending= [0])
     # now we will pick the top k nearest neighbour
     # neighbour_movie_ratings : ratings of movies of neighbors
     # user_movie_rating_matrix : ratings of each user for every movie
     # predicted_rating : Averge where rating is NaN
+    global similarity_matrix
     nearest_neighbours = similarity_matrix[:K]
     nearest_neighbour_ratings.table_neighbours = nearest_neighbours
     neighbour_movie_ratings = user_movie_rating_matrix.loc[nearest_neighbours.index]
@@ -107,9 +103,8 @@ def nearest_neighbour_ratings(current_user, K):
 # Predicting top N recommendations for a current user
 def top_n_recommendations(current_user, N):
     predicted_movie_rating = nearest_neighbour_ratings(current_user, N)
-    movies_already_watched = list(user_movie_rating_matrix.loc[current_user]
-                                  .loc[user_movie_rating_matrix.loc[current_user] > 0].index)
 
+    global movies_already_watched
     predicted_movie_rating = predicted_movie_rating.drop(movies_already_watched)
 
     top_n_recommendations = pd.DataFrame.sort_values(predicted_movie_rating, ['rating'], ascending=[0])[:N]
@@ -224,6 +219,18 @@ def home():
         combine_movie_rating = pd.merge(combine_movie_rating, data_links, on='movieId')
         combine_movie_rating = combine_movie_rating.dropna(axis = 0, subset = ['title'])
 
+        global similarity_matrix
+        for i in user_movie_rating_matrix.index:
+            # finding the similarity between user i and the current user and add it to the similarity matrix
+            similarity_matrix.loc[i] = similarity(user_movie_rating_matrix.loc[userId],
+                                                 user_movie_rating_matrix.loc[i])
+            # Sorting the similarity matrix in descending order
+        similarity_matrix = pd.DataFrame.sort_values(similarity_matrix,
+                                                    ['similarity'], ascending= [0])
+        global movies_already_watched
+        movies_already_watched = list(user_movie_rating_matrix.loc[userId]
+                                      .loc[user_movie_rating_matrix.loc[userId] > 0].index)
+
         movie_ratingCount = (combine_movie_rating.
              groupby(by = ['title'])['rating'].
              count().
@@ -232,7 +239,7 @@ def home():
              [['title', 'totalRatingCount']]
             )
         rating_with_totalRatingCount = combine_movie_rating.merge(movie_ratingCount, left_on = 'title', right_on = 'title', how = 'left')
-        popularity_threshold = 50
+        popularity_threshold = 70
         rating_popular_movie = rating_with_totalRatingCount.query('totalRatingCount >= @popularity_threshold')
         good_popular = (((rating_popular_movie.sort_values(by = 'movieId')).groupby('title')))['movieId', 'title', 'rating','totalRatingCount', 'imdbId']
         movie_list = good_popular.mean()
@@ -448,18 +455,21 @@ def get_recommendation2():
 
 
     current_user = session.get('id')
-    favourite_movies = fav_movies(current_user, 5)
+    # favourite_movies = fav_movies(current_user, 5)
     recommendations = top_n_recommendations(current_user, 5)
 
     recommendations = pd.merge(recommendations, data_links, on='movieId')
     recommendations = json.loads(recommendations.to_json(orient='records'))
 
     nearest = nearest_neighbour_ratings.table_neighbours
+    top_id = nearest.reset_index().loc[0][0]
+    top_fav = fav_movies(top_id, 5)
+    top_fav = json.loads(top_fav.to_json(orient='records'))
     neighbours = json.loads(nearest.reset_index().to_json(orient='records'))
     time.sleep(float(t)) #just to show it works...
 
     return render_template('result.html',
-    recommendations=recommendations, neighbours=neighbours,
+    recommendations=recommendations, neighbours=neighbours, top_fav=top_fav,
     titles = ['na', 'Movie List'])
 
 @app.route('/ratings')
