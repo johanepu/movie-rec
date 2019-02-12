@@ -274,12 +274,14 @@
               <tr>
                 <th class="four wide">User Id</th>
                 <th class="sorted descending six wide">Similarity</th>
+                <th class="sorted descending six wide">Common Movies</th>
               </tr></thead>
               <tbody>
                 {%for item in neighbours %}
                 <tr>
                   <td>{{ item['userId'] }}</td>
                   <td>{{ item['similarity'] }}</td>
+                  <td>{{ item['common_movies'] }}</td>
                 </tr>
                 {% endfor %}
               </tbody>
@@ -288,18 +290,19 @@
             <table class="ui sortable celled table">
               <thead>
                 <tr>
-                  <th class="four wide">User Id</th>
-                  <th class="sorted descending six wide">Similarity</th>
-                </tr></thead>
-                <tbody>
-                  {%for item in top_fav %}
-                  <tr>
-                    <td>{{ item['movieId'] }}</td>
-                    <td>{{ item['title'] }}</td>
-                  </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
+                  <th class="four wide">Movie Id</th>
+                  <th class="sorted descending six wide">Title</th>
+                </tr>
+              </thead>
+              <tbody>
+                {%for item in top_fav %}
+                <tr>
+                  <td>{{ item['movieId'] }}</td>
+                  <td>{{ item['title'] }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
           </div>
         </div>
     </div>
