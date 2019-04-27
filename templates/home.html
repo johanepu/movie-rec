@@ -301,7 +301,7 @@
               <img id="fav{{loop.index}}"alt="http://www.omdbapi.com/?apikey=c4a1ba1d&i=tt{{ item['imdbId'] }}" name='fav'
               src="{{ url_for('static', filename='assets/images/not-available.jpg') }}">
             </div>
-            <div class="content">
+            <div class="content" style="padding:0;">
               <a onclick='getImage({{ item['imdbId'] }});'><h5>{{ item['title'] }}</h5></a>
             </div>
             <div class="extra">
