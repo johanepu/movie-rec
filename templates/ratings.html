@@ -294,7 +294,6 @@
     <a href="{{ url_for('home') }}" class="item">Home</a>
     <a href="{{ url_for('panda') }}" class="item">Movie List</a>
     <a href="{{ url_for('ratings') }}" class="active item">Ratings</a>
-    <a class="item">Careers</a>
     <div class="right menu">
     {% if session['logged_in'] %}
       <div class="item">
@@ -304,10 +303,10 @@
       <div class="item">
         <a href="{{ url_for('do_admin_login') }}" class="ui button">Login</a>
       </div>
-    {% endif %}
       <div class="item">
         <a class="ui primary button">Sign Up</a>
       </div>
+    {% endif %}
     </div>
   </div>
 </div>
@@ -317,13 +316,12 @@
   <a href="{{ url_for('home') }}" class="item">Home</a>
   <a href="{{ url_for('panda') }}" class="item">Movie List</a>
   <a href="{{ url_for('ratings') }}" class="active item">Ratings</a>
-  <a class="item">Careers</a>
   {% if session['logged_in'] %}
     <a href="{{ url_for('logout') }}" class="item">Logout</a>
   {% else %}
     <a href="{{ url_for('do_admin_login') }}" class="item">Login</a>
-  {% endif %}
     <a class="item">Signup</a>
+  {% endif %}
 </div>
 
 
@@ -339,14 +337,13 @@
         <a href="{{ url_for('home') }}" class="item">Home</a>
         <a href="{{ url_for('panda') }}" class="item">Movie List</a>
         <a href="{{ url_for('ratings') }}" class="active item">Ratings</a>
-        <a class="item">Careers</a>
         <div class="right item">
           {% if session['logged_in'] %}
             <a href="{{ url_for('logout') }}" class="ui inverted button">Logout</a>
           {% else %}
             <a href="{{ url_for('do_admin_login') }}" class="ui inverted button">Login</a>
+            <a class="ui inverted button">Sign Up</a>
           {% endif %}
-          <a class="ui inverted button">Sign Up</a>
         </div>
       </div>
     </div>

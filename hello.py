@@ -26,12 +26,12 @@ class ServerError(Exception):pass
 #preprocess
 movie_data = pd.read_csv('dataset/movies.csv')
 rating_info = pd.read_csv('dataset/ratings.csv')
-movie_info = pd.merge(movie_data, rating_info, left_on = 'movieId', right_on = 'movieId')
-data_movies = pd.read_csv('dataset/movies.csv')
-data_ratings = pd.read_csv('dataset/ratings.csv')
 data_links = pd.read_csv('dataset/links.csv', usecols = [0,1], dtype={'imdbId':str} )
-def fav_movies(current_user, N):
-    fav_movies = pd.DataFrame.sort_values(movie_info[movie_info.userId == current_user], ['rating'], ascending = [0]) [:N]
+movie_info = pd.merge(movie_data, rating_info, left_on = 'movieId', right_on = 'movieId')
+user_movie_rating_matrix  = pd.pivot_table(movie_info, values = 'rating', index=['userId'], columns=['movieId'])
+
+def fav_movies(current_user):
+    fav_movies = pd.DataFrame.sort_values(movie_info[movie_info.userId == current_user], ['rating'], ascending = [0])
     return fav_movies
 
 def cek_movie(user1, user2):
@@ -42,53 +42,81 @@ def cek_movie(user1, user2):
     common_movie_ids = [i for i in range(len(user1)) if array1[i] > 0 and math.isnan(array1[i]) != True and array2[i] > 0 and math.isnan(array2[i]) != True]
     return common_movie_ids
 
-user_movie_rating_matrix  = pd.pivot_table(movie_info, values = 'rating', index=['userId'], columns=['movieId'])
-user_movie_rating_matrix.head()
+def rating_per_user(user1):
+    array_user = np.array(user1)
+    ids = user_movie_rating_matrix.columns.tolist()
+    rated_movies = [ids[i] for i in range(len(user1)) if array_user[i] > 0 and math.isnan(array_user[i]) != True]
+    # percentage = len(rated_movies)/len(user1)
+    return rated_movies
 
-def similarity(user1, user2):
-    common_movie_ids = cek_movie(user1, user2)
+def cek_common(user1, user2):
     # normalizing user1 rating i.e mean rating of user1 for any movie
     # nanmean will return mean of an array after ignore NaN values
-    vector1 = np.array(user1)
-    vector2 = np.array(user2)
+    ids = user_movie_rating_matrix.columns.tolist()
+    array1 = np.array(user1)
+    array2 = np.array(user2)
+    common_movie_ids = [ids[i] for i in range(len(user1)) if array1[i] > 0 and math.isnan(array1[i]) != True and array2[i] > 0 and math.isnan(array2[i]) != True]
+    return common_movie_ids
 
-    if(len(common_movie_ids) > 0):
-        vector1 = np.array([vector1[i] for i in common_movie_ids])
-        vector2 = np.array([vector2[i] for i in common_movie_ids])
-
+def pearson_similarity(user1, user2):
+    common_movie_ids = cek_common(user1, user2)
+    # finding the similarity between 2 users
+    # finding subset of movies rated by both the users
+    if(len(common_movie_ids) >= 1):
+        vector1 = np.array([user1.loc[i] for i in common_movie_ids])
+        vector2 = np.array([user2.loc[i] for i in common_movie_ids])
         return 1-correlation(vector1, vector2)
+    elif(len(common_movie_ids) < 1):
+        return 0
 
-def similarity2(user1, user2):
-    common_movie_ids = cek_movie(user1, user2)
+def pearson_p_similarity(user1, user2, t):
+    common_movie_ids = cek_common(user1, user2)
     # normalizing user1 rating i.e mean rating of user1 for any movie
     # nanmean will return mean of an array after ignore NaN values
-    vector1 = np.array(user1)
-    vector2 = np.array(user2)
+    # finding the similarity between 2 users
+    # finding subset of movies rated by both the users
+    if(len(common_movie_ids) >= t*len(rating_per_user(user1))):
+        vector1 = np.array([user1.loc[i] for i in common_movie_ids])
+        vector2 = np.array([user2.loc[i] for i in common_movie_ids])
+        return 1-correlation(vector1, vector2)
+    elif(len(common_movie_ids) < 1*len(rating_per_user(user1))):
+        return 0
 
-    if(len(common_movie_ids) > 0):
-        vector1 = np.array([vector1[i] for i in common_movie_ids])
-        vector2 = np.array([vector2[i] for i in common_movie_ids])
-
+def cosine_similarity(user1, user2):
+    common_movie_ids = cek_common(user1, user2)
+    # finding the similarity between 2 users
+    # finding subset of movies rated by both the users
+    if(len(common_movie_ids) >= 1):
+        vector1 = np.array([user1.loc[i] for i in common_movie_ids])
+        vector2 = np.array([user2.loc[i] for i in common_movie_ids])
         return 1-cosine(vector1, vector2)
+    elif(len(common_movie_ids) < 1):
+        return 0
 
-# We will now use the similarity function to find the nearest neighbour of a current user
-# nearest_neighbour_ratings function will find the k nearest neighbours of the current user and
-# then use their ratings to predict the current users ratings for other unrated movies
+def cosine_p_similarity(user1, user2, t):
+    common_movie_ids = cek_common(user1, user2)
+    # normalizing user1 rating i.e mean rating of user1 for any movie
+    # nanmean will return mean of an array after ignore NaN values
+    # finding the similarity between 2 users
+    # finding subset of movies rated by both the users
+    if(len(common_movie_ids) >= t*len(rating_per_user(user1))):
+        vector1 = np.array([user1.loc[i] for i in common_movie_ids])
+        vector2 = np.array([user2.loc[i] for i in common_movie_ids])
+        return 1-cosine(vector1, vector2)
+    elif(len(common_movie_ids) < 1*len(rating_per_user(user1))):
+        return 0
 
-# Creating an empty matrix whose row index is userId and the value
-# will be the similarity of that user to the current user
 similarity_matrix = pd.DataFrame(index = user_movie_rating_matrix.index,
                                 columns = ['similarity','common_movies'])
+
 movies_already_watched = user_movie_rating_matrix
 global nearest_neighbours
-def pearson_rating(current_user, K):
-    # now we will pick the top k nearest neighbour
-    # neighbour_movie_ratings : ratings of movies of neighbors
-    # user_movie_rating_matrix : ratings of each user for every movie
-    # predicted_rating : Averge where rating is NaN
+def pearson_p_prediction(current_user, K):
     global similarity_matrix
     nearest_neighbours = similarity_matrix[:K]
-    pearson_rating.table_neighbours = nearest_neighbours
+    if(nearest_neighbours['similarity'].sum()==0):
+        return None
+    pearson_p_prediction.table_neighbours = nearest_neighbours
     neighbour_movie_ratings = user_movie_rating_matrix.loc[nearest_neighbours.index]
      # This is empty dataframe placeholder for predicting the rating of current user using neighbour movie ratings
     predicted_movie_rating = pd.DataFrame(index = user_movie_rating_matrix.columns, columns = ['p_rating'])
@@ -104,6 +132,7 @@ def pearson_rating(current_user, K):
                                                     nearest_neighbours.loc[j, 'similarity']) / nearest_neighbours['similarity'].sum()
 
         predicted_movie_rating.loc[i, 'p_rating'] = predicted_rating
+
     global movies_already_watched
     predicted_movie_rating = predicted_movie_rating.drop(movies_already_watched)
     movie_ratingCount = (movie_info.
@@ -119,16 +148,15 @@ def pearson_rating(current_user, K):
 
 # Predicting top N recommendations for a current user
 def top_n_recommendations(current_user, N):
-    predicted_movie_rating = pearson_rating(current_user, N)
-    count_threshold = 50
-    predicted_movie_rating = predicted_movie_rating.query('totalRatingCount >= @count_threshold')
+    predicted_movie_rating = pearson_p_prediction(current_user, N)
     predicted_movie_rating = pd.DataFrame.sort_values(predicted_movie_rating,
                                                 ['p_rating','totalRatingCount'], ascending= [0,0])[:10]
 
     # top_n_recommendations = pd.DataFrame.sort_values(predicted_movie_rating, ['p_rating'], ascending=[0])[:N]
 
-    top_n_recommendation_titles = movie_data.loc[movie_data.movieId.isin(predicted_movie_rating.index)]
-
+    top_n_recommendation_titles = movie_data.loc[movie_data.movieId.isin(predicted_movie_rating.movieId)]
+    top_n_recommendation_titles = top_n_recommendation_titles.merge(predicted_movie_rating, left_on = 'movieId', right_on = 'movieId', how = 'left')
+    top_n_recommendation_titles = pd.DataFrame.sort_values(top_n_recommendation_titles, ['p_rating','totalRatingCount'], ascending=[0,0])
     return top_n_recommendation_titles
 
 #checkpoint timer
@@ -141,12 +169,35 @@ def before_request():
 @app.route('/')
 def index():
     connection = db.connect('localhost', 'root', '', 'movie_rec')
-    cursor = connection.cursor()
-    query = "SELECT * from users"
+    cur = connection.cursor()
+    if 'logged_in' in session:
+        return redirect(url_for('home'))
+    error = None
+    try:
+        if request.method == 'POST':
+            email_form  = request.form['email']
+            cur.execute("SELECT COUNT(1) FROM users_detail WHERE email = %s;", [email_form]
+                        )
 
-    cursor.execute(query)
-    result = cursor.fetchall()
-    return render_template('db.html', data = result)
+            if not cur.fetchone()[0]:
+                raise ServerError('Invalid email')
+
+            password_form  = request.form['password']
+            cur.execute("SELECT password,name,id FROM users_detail WHERE email = %s;", [email_form]
+                        )
+
+            for row in cur.fetchall():
+                if password_form == row[0]:
+                    session['name'] = row[1]
+                    session['id'] = row[2]
+                    session['logged_in'] = True
+                    return redirect(url_for('home'))
+
+            raise ServerError('Invalid password')
+    except ServerError as e:
+        error = str(e)
+
+    return render_template('signin.html', error=error)
 
 @app.route('/login', methods=['GET','POST'])
 def do_admin_login():
@@ -206,20 +257,18 @@ def coba():
 @app.route('/movie-dataframe')
 def panda():
     t = request.values.get('t', 0)
-    data_movies = pd.read_csv('dataset/movies.csv')
-    data_movies.set_index(['movieId'], inplace=True)
-    data_movies.index.name=None
+    movie_infos.set_index(['movieId'], inplace=True)
+    movie_info.index.name=None
 
 
-    return render_template('dataframe.html',tables=[data_movies.to_html(classes='ui definition table', table_id='movie_list')],
+    return render_template('dataframe.html',tables=[movie_info.to_html(classes='ui definition table', table_id='movie_list')],
     titles = ['na', 'Movie List'])
     time.sleep(float(t)) #just to show it works...
 
 #pake Panda dataframe
 @app.route('/rating-dataframe')
 def panda_rating():
-    data_ratings = pd.read_csv('dataset/ratings.csv')
-    sorted_ratings = data_ratings.sort_values('userId').reset_index(drop = True)
+    sorted_ratings = rating_info.sort_values('userId').reset_index(drop = True)
     sorted_ratings.set_index(['userId'], inplace=True)
     sorted_ratings.index.name=None
     return render_template('dataframe.html',tables=[sorted_ratings.to_html(classes='ratings')],
@@ -233,18 +282,18 @@ def home():
     else:
         name = session.get('name')
         userId = session.get('id')
-        combine_movie_rating = pd.merge(data_ratings, data_movies, on='movieId')
-        combine_movie_rating = pd.merge(combine_movie_rating, data_links, on='movieId')
+        rating_info = pd.read_csv('dataset/ratings.csv')
+        movie_info = pd.merge(movie_data, rating_info, left_on = 'movieId', right_on = 'movieId')
+        combine_movie_rating = pd.merge(movie_info, data_links, on='movieId')
         combine_movie_rating = combine_movie_rating.dropna(axis = 0, subset = ['title'])
 
         global similarity_matrix
+        similarity_matrix = similarity_matrix.drop(userId)
         for i in user_movie_rating_matrix.index:
             # finding the similarity between user i and the current user and add it to the similarity matrix
-            similarity_matrix.loc[i,'similarity'] = similarity(user_movie_rating_matrix.loc[userId],user_movie_rating_matrix.loc[i])
-            similarity_matrix.loc[i,'common_movies'] = len(cek_movie(user_movie_rating_matrix.loc[userId],user_movie_rating_matrix.loc[i]))
+            similarity_matrix.loc[i,'similarity'] = pearson_p_similarity(user_movie_rating_matrix.loc[userId],user_movie_rating_matrix.loc[i],0.3)
+            similarity_matrix.loc[i,'common_movies'] = len(cek_common(user_movie_rating_matrix.loc[userId],user_movie_rating_matrix.loc[i]))
             # Sorting the similarity matrix in descending order
-            mov_threshold = 3
-        similarity_matrix = similarity_matrix.query('common_movies >= @mov_threshold')
         similarity_matrix = pd.DataFrame.sort_values(similarity_matrix,
                                                     ['similarity'], ascending= [0])
         global movies_already_watched
@@ -267,10 +316,7 @@ def home():
         movie_list = movie_list.merge(data_links, left_on = 'movieId', right_on = 'movieId', how = 'left')
         movie_list = movie_list.as_matrix()
 
-        movieLens = pd.merge(data_ratings, data_movies, left_on = 'movieId', right_on = 'movieId')
-        movieLens = pd.merge(movieLens, data_links, on='movieId')
-
-        user_fav = fav_movies(userId, 10)
+        user_fav = fav_movies(userId)
         if len(user_fav) == 0:
             user_fav=[{}]
         else:
@@ -337,11 +383,11 @@ def get_recommendation2():
     recommendations = pd.merge(recommendations, data_links, on='movieId')
     recommendations = json.loads(recommendations.to_json(orient='records'))
 
-    nearest = pearson_rating.table_neighbours
+    nearest = pearson_p_prediction.table_neighbours
     nearest = nearest.iloc[1:]
     top_id = nearest.reset_index().loc[0][0]
-    top_fav = fav_movies(top_id, 5)
-    top_fav = json.loads(top_fav.to_json(orient='records'))
+    top_fav = fav_movies(top_id)
+    top_fav = json.loads(top_fav[:5].to_json(orient='records'))
     neighbours = json.loads(nearest.reset_index().to_json(orient='records'))
     time.sleep(float(t)) #just to show it works...
 

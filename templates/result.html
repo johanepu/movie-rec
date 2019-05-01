@@ -180,10 +180,9 @@
 <!-- Following Menu -->
 <div class="ui large top fixed hidden menu">
   <div class="ui container">
-    <a href="{{ url_for('home') }}" class="active item">Home</a>
+    <a href="{{ url_for('home') }}" class="item">Home</a>
     <a href="{{ url_for('panda') }}" class="item">Movie List</a>
     <a href="{{ url_for('ratings') }}" class="item">Ratings</a>
-    <a class="item">Careers</a>
     <div class="right menu">
     {% if session['logged_in'] %}
       <div class="item">
@@ -193,10 +192,10 @@
       <div class="item">
         <a href="{{ url_for('do_admin_login') }}" class="ui button">Login</a>
       </div>
-    {% endif %}
       <div class="item">
         <a class="ui primary button">Sign Up</a>
       </div>
+    {% endif %}
     </div>
   </div>
 </div>
@@ -206,13 +205,12 @@
   <a href="{{ url_for('home') }}" class="active item">Home</a>
   <a href="{{ url_for('panda') }}" class="item">Movie List</a>
   <a href="{{ url_for('ratings') }}" class="item">Ratings</a>
-  <a class="item">Careers</a>
   {% if session['logged_in'] %}
     <a href="{{ url_for('logout') }}" class="item">Logout</a>
   {% else %}
     <a href="{{ url_for('do_admin_login') }}" class="item">Login</a>
-  {% endif %}
     <a class="item">Signup</a>
+  {% endif %}
 </div>
 
 
@@ -228,14 +226,13 @@
         <a href="{{ url_for('home') }}" class="item">Home</a>
         <a href="{{ url_for('panda') }}" class="active item">Movie List</a>
         <a href="{{ url_for('ratings') }}"class="item">Ratings</a>
-        <a class="item">Careers</a>
         <div class="right item">
           {% if session['logged_in'] %}
             <a href="{{ url_for('logout') }}" class="ui inverted button">Logout</a>
           {% else %}
             <a href="{{ url_for('do_admin_login') }}" class="ui inverted button">Login</a>
+            <a class="ui inverted button">Sign Up</a>
           {% endif %}
-          <a class="ui inverted button">Sign Up</a>
         </div>
       </div>
     </div>
@@ -253,7 +250,7 @@
                 src="{{ url_for('static', filename='assets/images/not-available.jpg') }}">
               </div>
               <div class="content">
-                <a onclick='getImage({{ item['imdbId'] }});' class="header">{{ item['title'] }}</a>
+                <a href="https://www.imdb.com/title/tt{{ item['imdbId'] }}" class="header">{{ item['title'] }}</a>
               </div>
               <div class="extra">
                 {{ item['genres'] }}
@@ -266,43 +263,47 @@
       <div class="ui styled fluid accordion">
         <div class="title ui header">
           <i class="dropdown icon"></i>
-          Similarity Table
+          Show Computation Results
         </div>
         <div class="content active">
+          <h4> Recommendation Details </h4>
           <table class="ui sortable celled table">
             <thead>
               <tr>
-                <th class="four wide">User Id</th>
-                <th class="sorted descending six wide">Similarity</th>
-                <th class="sorted descending six wide">Common Movies</th>
+                <th class="four wide">Movie Id</th>
+                <th class="sorted descending six wide">Title</th>
+                <th class="sorted descending six wide">Predicted Rating</th>
+                <th class="sorted descending six wide">Rating Count</th>
               </tr></thead>
               <tbody>
-                {%for item in neighbours %}
-                <tr>
-                  <td>{{ item['userId'] }}</td>
-                  <td>{{ item['similarity'] }}</td>
-                  <td>{{ item['common_movies'] }}</td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-            <h4> Favorited Movies from Nearest User </h4>
-            <table class="ui sortable celled table">
-              <thead>
-                <tr>
-                  <th class="four wide">Movie Id</th>
-                  <th class="sorted descending six wide">Title</th>
-                </tr>
-              </thead>
-              <tbody>
-                {%for item in top_fav %}
+                {%for item in recommendations %}
                 <tr>
                   <td>{{ item['movieId'] }}</td>
                   <td>{{ item['title'] }}</td>
+                  <td>{{ item['p_rating'] }}</td>
+                  <td>{{ item['totalRatingCount'] }}</td>
                 </tr>
                 {% endfor %}
               </tbody>
             </table>
+            <h4> Similarity Details </h4>
+            <table class="ui sortable celled table">
+              <thead>
+                <tr>
+                  <th class="four wide">User Id</th>
+                  <th class="sorted descending six wide">Similarity</th>
+                  <th class="sorted descending six wide">Common Movies</th>
+                </tr></thead>
+                <tbody>
+                  {%for item in neighbours %}
+                  <tr>
+                    <td>{{ item['userId'] }}</td>
+                    <td>{{ item['similarity'] }}</td>
+                    <td>{{ item['common_movies'] }}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
           </div>
         </div>
     </div>

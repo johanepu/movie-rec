@@ -226,7 +226,6 @@
     <a href="{{ url_for('home') }}" class="active item">Home</a>
     <a href="{{ url_for('panda') }}" class="item">Movie List</a>
     <a href="{{ url_for('ratings') }}" class="item">Ratings</a>
-    <a class="item">Careers</a>
     <div class="right menu">
     {% if session['logged_in'] %}
       <div class="item">
@@ -236,10 +235,10 @@
       <div class="item">
         <a href="{{ url_for('do_admin_login') }}" class="ui button">Login</a>
       </div>
-    {% endif %}
       <div class="item">
         <a class="ui primary button">Sign Up</a>
       </div>
+    {% endif %}
     </div>
   </div>
 </div>
@@ -248,13 +247,12 @@
   <a href="{{ url_for('home') }}" class="active item">Home</a>
   <a href="{{ url_for('panda') }}" class="item">Movie List</a>
   <a href="{{ url_for('ratings') }}" class="item">Ratings</a>
-  <a class="item">Careers</a>
   {% if session['logged_in'] %}
     <a href="{{ url_for('logout') }}" class="item">Logout</a>
   {% else %}
     <a href="{{ url_for('do_admin_login') }}" class="item">Login</a>
-  {% endif %}
     <a class="item">Signup</a>
+  {% endif %}
 </div>
 
 
@@ -270,14 +268,13 @@
         <a href="{{ url_for('home') }}" class="active item">Home</a>
         <a href="{{ url_for('panda') }}" class="item">Movie List</a>
         <a href="{{ url_for('ratings') }}" class="item">Ratings</a>
-        <a class="item">Careers</a>
         <div class="right item">
           {% if session['logged_in'] %}
             <a href="{{ url_for('logout') }}" class="ui inverted button">Logout</a>
           {% else %}
             <a href="{{ url_for('do_admin_login') }}" class="ui inverted button">Login</a>
+            <a class="ui inverted button">Sign Up</a>
           {% endif %}
-          <a class="ui inverted button">Sign Up</a>
         </div>
       </div>
     </div>
@@ -287,14 +284,16 @@
         Home | {{ name }}
       </h1>
       <h2>Click button to get movie recommendation | userID : {{ userId }}.</h2>
-      {% if fav_movies|length < 5 %}
-      <p>You must have at least 5 movie rating</p>
-      <a href="#" class="ui disabled huge button" >Get Recommendations <i class="right arrow icon"></i></a>
-      {% else %}
-      <div class="ui clearing divider"></div>
-      <h2>Your current rated movies</h2>
+    </div>
+    {% if fav_movies|length < 20 %}
+    <p>You must have at least 20 movie rating</p>
+    <a href="#" class="ui disabled huge button" >Get Recommendations <i class="right arrow icon"></i></a>
+    {% else %}
+    <div class="ui clearing divider"></div>
+    <h2>Your current rated movies : {{fav_movies|length}}</h2>
+    <div class="ui middle aligned container">
       <div id="favdiv" class="ui five column grid">
-        {%for item in fav_movies %}
+        {%for item in fav_movies[:20] %}
         <div class="column">
           <div class="ui fluid card">
             <div class="image">
@@ -302,7 +301,7 @@
               src="{{ url_for('static', filename='assets/images/not-available.jpg') }}">
             </div>
             <div class="content" style="padding:0;">
-              <a onclick='getImage({{ item['imdbId'] }});'><h5>{{ item['title'] }}</h5></a>
+              <a href="https://www.imdb.com/title/tt{{ item['imdbId'] }}"><h5>{{ item['title'] }}</h5></a>
             </div>
             <div class="extra">
               Rating: {{ item['rating'] }}
@@ -317,7 +316,6 @@
         <i class="right arrow icon"></i></a>
       {% endif %}
     </div>
-
   </div>
 
   <div class="ui vertical stripe segment">
@@ -338,7 +336,7 @@
                   src="{{ url_for('static', filename='assets/images/not-available.jpg') }}">
                 </div>
                 <div class="content">
-                  <a onclick='getImage({{ item['imdbId'] }});' class="header">{{ item['title'] }}</a>
+                  <a href="https://www.imdb.com/title/tt{{ item['imdbId'] }}" class="header">{{ item['title'] }}</a>
                 </div>
                 <div class="extra">
                   Average Rating: {{ item['avgRating'] }}
@@ -363,7 +361,7 @@
                   src="{{ url_for('static', filename='assets/images/not-available.jpg') }}">
                 </div>
                 <div class="content">
-                  <a onclick='getImage({{ item['imdbId'] }});' class="header">{{ item['title'] }}</a>
+                  <a href="https://www.imdb.com/title/tt{{ item['imdbId'] }}" class="header">{{ item['title'] }}</a>
                 </div>
                 <div class="extra">
                   Total Rating: {{ item['totalRatingCount'] }}
